@@ -2297,6 +2297,1424 @@ break;
 </ul>
 
 <p>}</p>
+
+<p>membership_websignup.js:</p>
+
+<p>/* Copyright (C) Alphasys Pty Ltd, Inc - All Rights Reserved</p>
+
+<ul>
+<li>Unauthorized copying of this file, via any medium is strictly prohibited</li>
+<li>Proprietary and confidential</li>
+<li>Written by John Hope Ondona, John Lennon Maghanoy &amp; John Mark, January 2015
+*/</li>
+</ul>
+
+<p>/* Immediately-invoked function expression</p>
+
+<ul>
+<li>---------------------------------------</li>
+<li>Used to avoid variable hoisting from within blocks,</li>
+<li>protect against polluting the global environment</li>
+<li>and simultaneously allow public access to methods</li>
+<li>while retaining privacy for variables defined</li>
+<li>within the function
+<em>/
+(function($, window, undefined) { /</em> Parameters can be shortened or renamed */</li>
+</ul>
+
+<p>'use strict'; // uses strict coding standard</p>
+
+<p>/**</p>
+
+<ul>
+<li>jQuery's DOM Load callback</li>
+<li>
+<p>initialize function
+*/
+$(document).ready(function() {</p>
+
+<p>web_signup_default_add();
+show_step2();</p>
+
+<p>$("#webform-component-spouse-given-name label").html($("#webform-component-spouse-given-name label").text() + "<em></em>");
+$("#webform-component-spouse-surname label").html($("#webform-component-spouse-surname label").text() + "");
+$("#webform-component-spouses-ava-member-number label").html($("#webform-component-spouses-ava-member-number label").text() + "*");</p>
+
+<p>$('#edit-submitted-sig-options .form-checkbox').click(function() {
+    console.log($(this).val());
+    var tot = 0;
+    var sum = parseFloat(all_payment[$("input[name='submitted[chapter]']:checked").val()]) + parseFloat(all_payment[$("input[name='submitted[national_subscription]']:checked").val()]);
+    $("#webform-component-sig-options .form-checkbox").each(function() {
+        // alert($(this).val());
+        var wew = this.checked ? parseFloat(all_payment[$(this).val()]) : 0;
+        sum = sum + wew;
+        tot = tot + wew;
+    });
+    $('#ava_websignup_bill').html('$' + sum.toFixed(2));
+    $('#sig_total').html('$' + tot.toFixed(2));
+});</p>
+
+<p>/* this part is for step 2 showing of data start here </p>
+
+<ul>
+<li>note : some of this part will be omitted when it will be put in the live site
+*/</li>
+</ul>
+
+<p>$(".page-node-61802 #webform-component-are-you-eligible-for #edit-submitted-are-you-eligible-for").change(function(e) {
+    show_step2();
+});</p>
+
+<p>$("#node-61802 #edit-actions #edit-next").click(function(e) {
+    console.log("Navigating to next page...");
+    var yrcompleted = $("#edit-submitted-vet-year-completed").val();</p>
+
+<pre><code>if ($(this).val() == "Step 2") {
+    localStorage.setItem("yrcompleted", yrcompleted);
+}
+
+if ($(this).val() == "Step 3") {
+
+    $(".messages.error").remove();
+
+    var eligib_type2 = $('.page-node-61802 #webform-component-are-you-eligible-for #edit-submitted-are-you-eligible-for').val();
+    var STUDENT_TYPE = $("#webform-component-type-of-student-membership-appliied #edit-submitted-type-of-student-membership-appliied").val();
+
+    if (eligib_type2 == 'FULL/SPOUS') {
+        var error = 0, message = ""; // check for errors and define the message to apply
+
+        if ($("#edit-submitted-spouse-given-name").val() == "") {
+            error = 1;
+            message = "Please input your spouse given name.&lt;br/&gt;";
+        }
+
+        if ($("#edit-submitted-spouse-surname").val() == "") {
+            error = 1;
+            message += "Please input your spouse surname.&lt;br/&gt;";
+        }
+
+        if ($("#edit-submitted-spouses-ava-member-number").val() == "") {
+            error = 1;
+            message += "Please input your spouse member number.&lt;br/&gt;";
+        }
+
+        if (error == 1) {
+            console.log("naay error");
+            $('.page-node-61802 #title').prepend("&lt;div class='messages error'&gt;" + message + "&lt;/div&gt;");
+            return false;
+        } else {
+            $(".messages.error").remove();
+        }
+    } else {
+        if (STUDENT_TYPE == 'STUDN' || eligib_type2 == 'FULL/Yr') {
+            var error = 0, message = ""; // check for errors and define the message to apply
+            var sample2 = localStorage.getItem("yrcompleted");
+            var currtime = new Date();
+            var curryr = currtime.getFullYear();
+            var yrcalc2 = curryr - parseInt(sample2);
+
+            if (STUDENT_TYPE == 'STUDN' || (eligib_type2 == 'FULL/Yr' &amp;&amp; yrcalc2 &lt;= 2)) {
+
+                console.log('sulod jud unta sa 2');
+
+                if (!(atLeastOneRadioIsChecked('submitted[insurance][relation__student_master_policy][1]') &amp;&amp; atLeastOneRadioIsChecked('submitted[insurance][relation__student_master_policy][2]') &amp;&amp; atLeastOneRadioIsChecked('submitted[insurance][relation__student_master_policy][3]'))) {
+                    $('.page-node-61802 #title').prepend("&lt;div class='messages error'&gt;Please answer all the student master policy question.&lt;br/&gt;&lt;/div&gt;");
+                    $('html,body').animate({ scrollTop: 0 }, 'slow');
+                    return false;
+                } else {
+                    $(".messages.error").remove();
+                }
+
+                // if (error == 1) {
+                    // $('.page-node-61802 #title').prepend("&lt;div class='messages error'&gt;" + message + "&lt;/div&gt;");
+                    // return false;
+                // } else {
+                    // $(".messages.error").remove();
+                // }
+
+                /*
+                if (!($("input[name='submitted[insurance][relation__student_master_policy][1]']:checked").val())) {
+                    error = 1;
+                    message = "Please answer all the student master policy question.&lt;br/&gt;";
+                } else if (!($("input[name='submitted[insurance][relation__student_master_policy][2]']:checked").val())) {
+                    error = 1;
+                    message = "Please answer all the student master policy question.&lt;br/&gt;";
+                } else if (!($("input[name='submitted[insurance][relation__student_master_policy][3]']:checked").val())) {
+                    error = 1;
+                    message = "Please answer all the student master policy question.&lt;br/&gt;";
+                }
+                if (error == 1) {
+                    $('.page-node-61802 #title').prepend("&lt;div class='messages error'&gt;" + message + "&lt;/div&gt;");
+                    return false;
+                } else {
+                    $(".messages.error").remove();
+                }
+                */
+
+            }
+
+        }
+    }
+
+}
+</code></pre>
+
+<p>});</p>
+
+<p>$("#webform-component-type-of-student-membership-appliied #edit-submitted-type-of-student-membership-appliied").change(function(e) {
+    console.log($(this).val());
+    var eligib_type = $(this).val();
+    if (eligib_type == 'STDOL') {
+        $(".page-node-61802 #webform-component-insurance").hide();
+        $(".page-node-61802 #webform-component-student-online legend .fieldset-legend").text("Student Online");
+        $(".page-node-61802 #webform-component-student-online div .fieldset-description").text("Student Online Members have free access to AVA Website. To receive the AVJ and free GUILD insurance as a Student Member, you need to upgrade to a Paid Student Member");
+    } else if (eligib_type == 'STUDN') {
+        $(".page-node-61802 #webform-component-insurance").show().css({
+            'display': 'inline',
+            'width': '92%'
+        });
+        $(".page-node-61802 #webform-component-student-online legend .fieldset-legend").text("Student Paid");
+        $(".page-node-61802 #webform-component-student-online div .fieldset-description").text("Paid Student Members are eligible for complimentary PI insurance under the AVA Student Master Policy");</p>
+
+<pre><code>}
+</code></pre>
+
+<p>});</p>
+
+<p>$("#edit-submitted-type-category").change(function(evt) {
+    switch (this.value) {
+        case "0":
+            clearFields(["edit-submitted-stud-educational-information",
+                         "edit-submitted-degree",
+                         "edit-submitted-degree-year"]);
+            break;
+        case "1":
+            clearFields(["edit-submitted-vet-educational-information",
+                         "edit-submitted-vet-year-completed",
+                         "edit-submitted-state-board-registered",
+                         "edit-submitted-state-board-registration-number"]);
+            break;
+    }
+});</p>
+
+<p>// $(".page-node-61802 #webform-component-are-you-eligible-for #edit-submitted-are-you-eligible-for").change(function(e) {
+// });
+/* this part is for step 2 showing of data start here */
+});</p>
+</li>
+</ul>
+
+<p>/**</p>
+
+<ul>
+<li>[clearFields description]</li>
+<li>
+<a href="https://github.com/param" class="user-mention">@param</a>  {String[]} fieldsArray Array of String ids
+*/
+function clearFields(fieldsArray) {
+while (true) {
+    document.getElementById(fieldsArray.pop()).value = "";
+    if (fieldsArray.length == 0) break;
+}
+}</li>
+</ul>
+
+<p>/**</p>
+
+<ul>
+<li>[atLeastOneRadioIsChecked description]</li>
+<li>
+<a href="https://github.com/param" class="user-mention">@param</a>  {String} name [description]</li>
+<li>
+<a href="https://github.com/return" class="user-mention">@return</a> {Boolean}      [description]
+*/
+function atLeastOneRadioIsChecked(name) {
+return ($('input[name="' + name + '"]:checked').size() &gt; 0);
+}</li>
+</ul>
+
+<p>/**</p>
+
+<ul>
+<li>[web_signup_default_add description]</li>
+<li>
+<p><a href="https://github.com/return" class="user-mention">@return</a> {[type]} [description]
+*/
+function web_signup_default_add() {
+if (typeof all_payment != 'undefined') {
+    $("#edit-submitted-chapter .multicolumn-options-column .form-item-submitted-chapter .option").each(function() {
+        var res = $(this).text().split("$");
+        $(this).html("</p>
+<div>" + res[0] + "</div>
+<div> $" + res[1] + "</div>");
+    });
+
+<pre><code>$("#edit-submitted-sig-options .multicolumn-options-column .form-type-checkbox .option").each(function() {
+    var res = $(this).text().split("$");
+    $(this).html("&lt;div class='websignup_option_name'&gt;" + res[0] + "&lt;/div&gt;&lt;div class='websignup_option_price'&gt; $" + res[1] + "&lt;/div&gt;");
+});
+
+var tot = 0;
+/* $('.form-item-submitted-chapter .add-checkbox:checked').each(function() {
+tot += math[$(this).attr('id')];
+}); */
+var sum = parseFloat(all_payment[$("input[name='submitted[chapter]']:checked").val()]) + parseFloat(all_payment[$("input[name='submitted[national_subscription]']:checked").val()]);
+$("#webform-component-sig-options .form-checkbox").each(function() {
+        // alert($(this).val());
+        var wew = this.checked ? parseFloat(all_payment[$(this).val()]) : 0;
+        sum = sum + wew;
+        tot = tot + wew;
+    });
+$('#ava_websignup_bill').html('$' + sum.toFixed(2));
+$('#sig_total').html('$' + tot.toFixed(2));
+$('#national_subscription_total').html('$' + all_payment[$("input[name='submitted[national_subscription]']:checked").val()]);
+$('#chapter_total').html('$' + all_payment[$("input[name='submitted[chapter]']:checked").val()]);
+</code></pre>
+
+<p>}
+}</p>
+</li>
+</ul>
+
+<p>/**</p>
+
+<ul>
+<li>[hidden_step2 description]</li>
+<li>
+<a href="https://github.com/return" class="user-mention">@return</a> {[type]} [description]
+*/
+function hidden_step2() {
+try {
+    $(".page-node-61802 #webform-component-yr1-2, .page-node-61802 #webform-component-yr3, .page-node-61802 #webform-component-graduate-description, .page-node-61802 #webform-component-spouse-given-name, .page-node-61802 #webform-component-spouses-ava-member-number, .page-node-61802 #webform-component-spouse-membership-status, .page-node-61802 #webform-component-spouse-surname, .page-node-61802 #webform-component-insurance").hide();
+} catch (exception) {
+    // do nothing
+}
+}</li>
+</ul>
+
+<p>/**</p>
+
+<ul>
+<li>[show_step2 description]</li>
+<li>
+<p><a href="https://github.com/return" class="user-mention">@return</a> {[type]} [description]
+*/
+function show_step2() {</p>
+
+<p>/**</p>
+
+<ul>
+<li>Reset all form element's values</li>
+<li>------------------------------</li>
+<li>
+<a href="https://github.com/author" class="user-mention">@author</a> John Mark</li>
+<li>
+<a href="https://github.com/date" class="user-mention">@date</a> 2/17/2015
+*/
+// console.log("Resetting all form fields to empty value...");
+// iterate all radio and set its checked state to false
+$("#webform-component-insurance--relation--student-master-policy input:radio").each(function(index) {
+this.checked = false;
+});
+// set every select form field's value to empty string ("")
+$('#edit-submitted-type-of-student-membership-appliied').val("STDOL");</li>
+</ul>
+
+<p>hidden_step2();</p>
+
+<p>var eligib_type = $('.page-node-61802 #webform-component-are-you-eligible-for #edit-submitted-are-you-eligible-for').val();
+console.log($(eligib_type).val());</p>
+
+<p>// $.ajax({
+// url : "<a href="http://10.0.10.202/jack_api/api/get_university">http://10.0.10.202/jack_api/api/get_university</a>",
+// type: "POST",
+// data : {cat:eligib_type},
+// contentType  :"application/json",
+// success:function(result){
+// console.log(result);
+// }
+// }); </p>
+
+<p>if (eligib_type == 'FULL/NODIS') {</p>
+
+<pre><code>$("#webform-component-graduate-description").show();
+$(".page-node-61802 #webform-component-graduate-description legend .fieldset-legend").text("Not eligible for a concession");
+$(".page-node-61802 #webform-component-graduate-description div .fieldset-description").text("Not eligible for discount");
+$("#webform-component-spouse-given-name, #webform-component-spouses-ava-member-number, #webform-component-spouse-membership-status, #webform-component-spouse-surname, #webform-component-insurance,#webform-component-yr1-2").hide();
+// $("#webform-component-spouses-ava-member-number").hide();
+// $("#webform-component-spouse-membership-status").hide();
+</code></pre>
+
+<p>} else if (eligib_type == 'FULL/RED50') {
+    $(".page-node-61802 #webform-component-graduate-description").show();
+    $(".page-node-61802 #webform-component-graduate-description legend .fieldset-legend").text("Reduce Income Concession");
+    $(".page-node-61802 #webform-component-graduate-description div .fieldset-description").text("I am currently earning $35,000 or less gross annual income from both veterinary and non-veterinary activities.");
+    $("#webform-component-spouse-given-name, #webform-component-spouses-ava-member-number, #webform-component-spouse-membership-status, #webform-component-spouse-surname, #webform-component-insurance,#webform-component-yr1-2").hide();
+    // $(".page-node-61802 #webform-component-spouse-given-name").hide();
+    // $(".page-node-61802 #webform-component-spouses-ava-member-number").hide();
+    // $(".page-node-61802 #webform-component-spouse-membership-status").hide();
+} else if (eligib_type == 'FULL/SPOUS') {
+    $("#webform-component-graduate-description, #webform-component-spouse-given-name, #webform-component-spouse-membership-status, #webform-component-spouses-ava-member-number, #webform-component-spouse-surname").show();
+    // $(".page-node-61802 #webform-component-graduate-description").show();
+    // $("#webform-component-spouse-given-name").show();
+    // $("#webform-component-spouse-membership-status").show();
+    // $("#webform-component-spouses-ava-member-number").show();
+    $(".page-node-61802 #webform-component-graduate-description legend .fieldset-legend").text("Spousal Concession");
+    $(".page-node-61802 #webform-component-graduate-description div .fieldset-description").text("I am married or in a de facto relationship with a current AVA member who is paying full membership fees.I currently share the same residential address and am financially interdependent with this member.");
+} else if (eligib_type == 'FULL/Yr') {
+    $(".page-node-61802 #webform-component-graduate-description").show();
+    $(".page-node-61802 #webform-component-spouse-given-name, .page-node-61802 #webform-component-spouses-ava-member-number, .page-node-61802 #webform-component-spouse-membership-status, #webform-component-spouse-surname,#webform-component-yr1-2").hide();
+    $(".page-node-61802 #webform-component-graduate-description legend .fieldset-legend").text("Graduate Concession");
+    $(".page-node-61802 #webform-component-graduate-description div .fieldset-description").text("I have graduated from a recognised Australian University in the past three years.");</p>
+
+<pre><code>var sample = localStorage.getItem("yrcompleted");
+console.log(sample);
+
+var currtime = new Date();
+var curryr = currtime.getFullYear();
+
+var yrcalc = curryr - parseInt(sample);
+console.log(yrcalc);
+
+if (yrcalc &lt;= 2) {
+
+    $(".page-node-61802 #webform-component-yr1-2").show();
+    $(".page-node-61802 #webform-component-yr1-2 legend").css("display", "inline");
+    $(".page-node-61802 #webform-component-yr1-2 legend .fieldset-legend").text("Year 1 &amp; 2 Graduates");
+    $(".page-node-61802 #webform-component-yr1-2 div .fieldset-description").text("Year 1 &amp; 2 Graduates: GUILD Graduate Master Policy Declaration and link to FAQ and PDS.");
+    $(".page-node-61802 #webform-component-insurance").show().css({
+        'display': 'inline',
+        'width': '92%'
+    });
+
+    console.log("jlm ga test ani");
+
+    $(".page-node-61802 #webform-component-insurance--insurance #yr1and2").text("As a first and second year graduate member of the AVA, members receive complimentary professional indemnity(PI) insurance provided through Guild. If you're employed as a veterinarian, your work will be covered by your employer's professional indemnity(PI) insurance, however, if you do any veterinary work outside the practice such as at competition events or as a volunteer, you should think about having your own PI insurance cover.");
+
+    $(".page-node-61802 #webform-component-insurance--relation--student-master-policy label").text("Please answer the following questions in relation to the Graduate Master Policy");
+
+    $(".page-node-61802 #webform-component-insurance--relation--student-master-policy table.webform-grid tbody tr.odd:nth-child(3) td:first-child").text("3. Do you perform any professional services that fall outside the terms of your registration with the Veterinary Registration Board in your state or territory?");
+
+    $(".page-node-61802 #webform-component-insurance--information-on-your-insurance-cover #text1").text("If you answered yes to any of the above questions or, if you do not have current registration with an Australian veterinary registration board, your application will be referred to the insurer for individual review and you may be contacted by the insurer for additional information. Please note that your membership information will be provided to the insurer.");
+
+    $(".page-node-61802 #webform-component-insurance--information-on-your-insurance-cover #text2").text("The AVA holds a Graduate Master Policy for Graduate Year 1 and Graduate Year 2 members of the AVA and the cover is only available to financial members of the AVA.");
+
+    $(".page-node-61802 #webform-component-insurance--information-on-your-insurance-cover #text3").text("Guild Insurance Limited, ABN 55 004 538 863 AFSL 23379 has underwritten this AVA Graduate Master Policy and limit liability for Professional Indemnity, Public Liability and Products Liability Insurance is $10 million.");
+
+    $(".page-node-61802 #webform-component-insurance--information-on-your-insurance-cover #text4").text("The policy commenced 1 January 2013 with renewal taking place on 30 June annually. A certificate of cover will be automatically provided to Graduate Year 1 and Graduate Year 2 members. For detailed information on policy coverage please refer to the certificate of cover or contact the AVA.");
+
+    $(".page-node-61802 #webform-component-insurance--information-on-your-insurance-cover #text5").text("Please note that the underwriting conditions may apply. At the end of graduate Year 2, you will need to purchase your own insurance policy to continue to protect you against these liabilities and Guild Insurance will send you an invitation to commence your own individual policy.");
+
+} else if (yrcalc &gt; 2) {
+    $(".page-node-61802 #webform-component-yr1-2").show();
+    // $(".page-node-61802 #webform-component-yr1-2 legend .fieldset-legend").text("Year 3 Graduates");
+    $(".page-node-61802 #webform-component-yr1-2 legend").css("display", "none");
+    // $(".page-node-61802 #webform-component-yr1-2 div .fieldset-description").text("Concession ONLY no insurance reference.");
+    $(".page-node-61802 #webform-component-yr1-2 div .fieldset-description").text("If you are a graduate 3 years out, you are eligible for the graduate concession but not complimentary professional indemnity insurance.");
+} else {
+    $(".page-node-61802 #webform-component-yr1-2").hide();
+}
+</code></pre>
+
+<p>} else if (eligib_type == '') {
+    hidden_step2();
+    // $(".page-node-61802 #webform-component-graduate-description").hide();
+    // $(".page-node-61802 #webform-component-spouse-given-name").hide();
+    // $(".page-node-61802 #webform-component-spouses-ava-member-number").hide();
+    // $(".page-node-61802 #webform-component-spouse-membership-status").hide();
+    // $(".page-node-61802 #webform-component-member-id").hide();
+}
+}</p>
+</li>
+</ul>
+
+<p>/** ----------end---------- **/</p>
+
+<p>}(jQuery, window)) // end of siaf</p>
+
+<p>membership_websignup_review.js:</p>
+
+<p>jQuery(document).ready(function(){</p>
+
+<pre><code>check_field_eligible();
+set_chapter();
+</code></pre>
+
+<p>function check_field_eligible() {
+    jQuery(".form-item-paid-a1national-yr1").css('display','none');
+    jQuery(".form-item-paid-a1national-yr2").css('display','none');
+    jQuery(".form-item-paid-a1national-yr3").css('display','none');</p>
+
+<pre><code>jQuery(".form-item-paid-chapter-yr1").css('display','none');
+jQuery(".form-item-paid-chapter-yr2").css('display','none');
+jQuery(".form-item-paid-chapter-yr3").css('display','none');
+
+
+
+if(jQuery("select[name='field_eligible']").val() == "FULL/Yr"){
+    var year = new Date().getFullYear();
+    var input = parseInt(jQuery("input[name='field_year_of_completion']").val());
+    var ans = year - input;
+    if(ans &lt;= 1){
+    // jQuery("input[name='hiddenyear']").val("1");
+        jQuery(".form-item-paid-a1national-yr1").css('display','block');
+        jQuery(".form-item-paid-a1national-yr2").css('display','none');
+        jQuery(".form-item-paid-a1national-yr3").css('display','none');
+
+        jQuery(".form-item-paid-chapter-yr1").css('display','block');
+        jQuery(".form-item-paid-chapter-yr2").css('display','none');
+        jQuery(".form-item-paid-chapter-yr3").css('display','none');
+    } else if(ans == 2){
+        jQuery(".form-item-paid-a1national-yr1").css('display','none');
+        jQuery(".form-item-paid-a1national-yr2").css('display','block');
+        jQuery(".form-item-paid-a1national-yr3").css('display','none'); 
+
+        jQuery(".form-item-paid-chapter-yr1").css('display','none');
+        jQuery(".form-item-paid-chapter-yr2").css('display','block');
+        jQuery(".form-item-paid-chapter-yr3").css('display','none');
+    }else if(ans &gt;= 3){
+        jQuery(".form-item-paid-a1national-yr1").css('display','none');
+        jQuery(".form-item-paid-a1national-yr2").css('display','none');
+        jQuery(".form-item-paid-a1national-yr3").css('display','block');
+
+        jQuery(".form-item-paid-chapter-yr1").css('display','none');
+        jQuery(".form-item-paid-chapter-yr2").css('display','none');
+        jQuery(".form-item-paid-chapter-yr3").css('display','block');
+    }
+}
+</code></pre>
+
+<p>}</p>
+
+<pre><code>jQuery("select[name='field_eligible']").change(function(){
+    check_field_eligible();
+});
+jQuery("select[name='field_postal_state']").change(function(){
+    set_chapter();
+});
+jQuery("input[name='field_year_of_completion']").change(function(){
+    check_field_eligible();
+});
+</code></pre>
+
+<p>function set_chapter(){
+    var postal_state = jQuery("select[name='field_postal_state']").val();
+    jQuery('input:radio[name=paid_chapter_full], input:radio[name=paid_chapter_red], input:radio[name=paid_chapter_spouse], input:radio[name=paid_chapter_yr1], input:radio[name=paid_chapter_yr2], input:radio[name=paid_chapter_yr3]').filter("[value='"+postal_state+"']").prop('checked', true);
+    console.log(postal_state);
+}</p>
+
+<p>})</p>
+
+<p>membership_websignup_review.inc:</p>
+
+<p>&lt;?php</p>
+
+<p>include_once(drupal_get_path('module', 'webform') ."/includes/webform.submissions.inc");
+function ava_web_signup_review_form($form, &amp;$form_state, $value) {
+    // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'STUDN')), true);
+    // print_r($pricing_list);die();
+     // $pricing_list2 = json_decode(ava_websignup_api_call('GET', 'api/get_all_pricing'), true);
+     // print_r($pricing_list2);die();
+    $node = node_load($value);
+    $submission = webform_get_submission($node-&gt;webform_id,$node-&gt;submission_id);</p>
+
+<pre><code>if ($node-&gt;type != 'ava_membership_application'){
+    drupal_not_found();
+    die();
+} 
+    $form['#attached']['js'][] = drupal_get_path('module', 'ava_websignup') . '/ava_websignup_review.js';
+    drupal_set_title('Membership and Web Sign-up - Review');
+    // title
+    $form['personal_info'] = array(
+        '#type' =&gt; 'fieldset', 
+        '#title' =&gt; t('1. Personal Details'), 
+        '#collapsible' =&gt; FALSE, 
+    );
+
+    // $form['personal_info']['field_title'] = array(
+        // '#type' =&gt; 'select',
+        // '#required' =&gt; true,
+        // '#title' =&gt; t('Title'),
+        // '#options' =&gt; array('Miss','Mr','Mrs','Ms','Dr','Prof'),
+        // '#default_value' =&gt; $node-&gt;field_title['und'][0]['value'],
+        // '#multiple' =&gt; false,
+    // );
+
+    $form['personal_info']['field_first_name'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('First Name'), 
+        '#size' =&gt; 60, 
+        '#maxlength' =&gt; 128,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[4]['value'][0],
+    );
+
+    $form['personal_info']['field_last_name'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('Last Name'), 
+        '#size' =&gt; 60, 
+        '#maxlength' =&gt; 128,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[5]['value'][0],
+    );
+
+    $form['personal_info']['field_middle_name'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('Middle Name'), 
+        '#size' =&gt; 60, 
+        '#maxlength' =&gt; 128,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[6]['value'][0],
+    );
+
+    $form['personal_info']['field_date_of_birth'] = array(
+      '#type' =&gt; 'date_popup', 
+      '#title' =&gt; t('Date of Birth'), 
+      '#default_value' =&gt; $submission-&gt;data[7]['value'][0],
+      '#required' =&gt; TRUE,
+    );
+
+    $form['personal_info']['field_gender'] = array(
+        '#type' =&gt; 'select',
+        '#required' =&gt; true,
+        '#title' =&gt; t('Gender'),
+        '#options' =&gt; array(
+            'M' =&gt; 'Male',
+            'F' =&gt; 'Female',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[8]['value'][0],
+        '#multiple' =&gt; false,
+    );
+
+    $form['personal_info']['field_postal_street_address'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('Postal Street Address'), 
+        '#size' =&gt; 60,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[11]['value'][0],
+    );
+
+    $form['personal_info']['field_avawebsignup_city'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('City'), 
+        '#size' =&gt; 60,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[9]['value'][0],
+    );
+
+    $form['personal_info']['field_postal_state'] = array(
+        '#type' =&gt; 'select',
+        '#required' =&gt; true,
+        '#title' =&gt; t('Postal State'),
+        '#options' =&gt; array(
+            'CHAPT/ACT' =&gt; 'ACT Division',
+            'CHAPT/NSW' =&gt; 'NSW Division',
+            'CHAPT/NT'  =&gt; 'NT Division',
+            'CHAPT/QLD' =&gt; 'QLD Division',
+            'CHAPT/SA'  =&gt; 'SA Division',
+            'CHAPT/TAS' =&gt; 'TAS Division',
+            'CHAPT/VIC' =&gt; 'VIC Division',
+            'CHAPT/WA'  =&gt; 'WA Division',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[10]['value'][0],
+        '#multiple' =&gt; false,
+    );
+
+    $form['personal_info']['field_postal_postcode'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('Postal Postcode'), 
+        '#size' =&gt; 60,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[12]['value'][0],
+    );
+
+    $form['personal_info']['field_telephone_no'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('Telephone No.'), 
+        '#size' =&gt; 60,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[13]['value'][0],
+    );
+
+    $form['personal_info']['field_mobile_no'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('Mobile No.'), 
+        '#size' =&gt; 60,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[14]['value'][0],
+    );
+
+    $form['personal_info']['field_avawebsignup_email_address'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('Email Address'), 
+        '#size' =&gt; 60,
+        '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[36]['value'][0],
+    );
+
+    $form['personal_info']['field_decision_factor'] = array(
+        '#type' =&gt; 'select',
+        '#required' =&gt; true,
+        '#title' =&gt; t('Why join the AVA ?'),
+        '#options' =&gt; array(
+            0 =&gt; 'Being part of the profession',
+            1   =&gt; 'Events and education',
+            2   =&gt; 'Encouraged by colleagues',
+            3   =&gt; 'Member benefits',
+            4   =&gt; 'Employer paid for membership',
+            5   =&gt; 'Other',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[39]['value'][0],
+        '#multiple' =&gt; false,
+    );
+
+    // category
+    $form['category'] = array(
+        '#type' =&gt; 'fieldset', 
+        '#title' =&gt; t(''), 
+        '#collapsible' =&gt; FALSE, 
+    );
+
+    $form['category']['field_type_category'] = array(
+        '#type' =&gt; 'select',
+        '#required' =&gt; true,
+        '#title' =&gt; t('I am a...'),
+        '#options' =&gt; array(
+            0 =&gt; 'I am student enrolled in Vet Science',
+            1   =&gt; 'I am a qualified veterinarian',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[38]['value'][0],
+        '#multiple' =&gt; false,
+    );
+
+    /* $form['category']['field_type_category'] = array(
+        '#type' =&gt; 'select',
+        '#required' =&gt; true,
+        '#title' =&gt; t('I am a...'),
+        '#options' =&gt; array(
+            0 =&gt; 'I am student enrolled in Vet Science',
+            1   =&gt; 'I am a qualified veterinarian',
+        ),
+        '#default_value' =&gt; $node-&gt;field_type_category['und'][0]['value'],
+        '#multiple' =&gt; false,
+    ); */
+
+    $university_list = array();
+    $university_list2 = array();
+    $responseData_stud = json_decode(ava_websignup_api_call('POST', 'api/get_university', array('type' =&gt; 'stud')), true);
+    $responseData_vet = json_decode(ava_websignup_api_call('POST', 'api/get_university', array('type' =&gt; 'full')), true);
+
+
+    foreach($responseData_stud as $key=&gt;$value){
+        $university_list[$value['code']."|".$value['division']] = $value['description'];
+    }
+    foreach($responseData_vet as $key=&gt;$value){
+        $university_list2[$value['code']."|".$value['division']] = $value['description'];
+    }
+
+    $form['category']['field_university_stud'] = array(
+        '#type' =&gt; 'select',
+        // '#required' =&gt; true,
+        '#title' =&gt; t('University Student'),
+        '#options' =&gt; $university_list,
+        '#default_value' =&gt; $submission-&gt;data[17]['value'][0] != ""?$submission-&gt;data[17]['value'][0]:$submission-&gt;data[40]['value'][0],
+        '#multiple' =&gt; false,
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 0),
+              ),
+            ),
+    );
+
+    $form['category']['field_degree'] = array(
+        '#type' =&gt; 'select',
+        // '#required' =&gt; true,
+        '#title' =&gt; t('Degree'),
+        '#options' =&gt; array(
+            'BVSC' =&gt; 'BVSC',
+            'DVM' =&gt; 'DVM',
+            'BVMS' =&gt; 'BVMS',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[66]['value'][0],
+        '#multiple' =&gt; false,
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 0),
+              ),
+            ),
+    );
+
+    $form['category']['field_degree_year'] = array(
+        '#type' =&gt; 'select',
+        // '#required' =&gt; true,
+        '#title' =&gt; t('Degree'),
+        '#options' =&gt; array(
+            1 =&gt; '1',
+            2 =&gt; '2',
+            3 =&gt; '3',
+            4 =&gt; '4',
+            5 =&gt; '5',
+            6 =&gt; '6',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[67]['value'][0],
+        '#multiple' =&gt; false,
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 0),
+              ),
+            ),
+    );
+
+    $form['category']['field_type_of_student_membership'] = array(
+        '#type' =&gt; 'select',
+        // '#required' =&gt; true,
+        '#title' =&gt; t('Student Membership Options'),
+        '#options' =&gt; array(
+            'STDOL' =&gt; 'Student Online',
+            'STUDN' =&gt; 'Student Paid',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[42]['value'][0],
+        '#multiple' =&gt; false,
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 0),
+              ),
+            ),
+    );
+
+    $form['category']['field_university_vet'] = array(
+        '#type' =&gt; 'select',
+        // '#required' =&gt; true,
+        '#title' =&gt; t('University Veterinarian'),
+        '#options' =&gt; $university_list2,
+        '#default_value' =&gt; $submission-&gt;data[40]['value'][0],
+        '#multiple' =&gt; false,
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+              ),
+            ),
+    );
+
+    $form['category']['field_year_of_completion'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('Year of Completion'), 
+        '#size' =&gt; 60,
+        // '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[41]['value'][0],
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+              ),
+            ),
+    );
+
+    $form['category']['field_state_board_registered'] = array(
+        '#type' =&gt; 'select',
+        // '#required' =&gt; true,
+        '#title' =&gt; t('State Board Registered'),
+        '#options' =&gt; array(
+            'CHAPT/ACT' =&gt; 'ACT Division',
+            'CHAPT/NSW' =&gt; 'NSW Division',
+            'CHAPT/NT'  =&gt; 'NT Division',
+            'CHAPT/OS'  =&gt; 'Overseas Member',
+            'CHAPT/QLD' =&gt; 'QLD Division',
+            'CHAPT/SA'  =&gt; 'SA Division',
+            'CHAPT/TAS' =&gt; 'TAS Division',
+            'CHAPT/VIC' =&gt; 'VIC Division',
+            'CHAPT/WA'  =&gt; 'WA Division',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[68]['value'][0],
+        '#multiple' =&gt; false,
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+              ),
+            ),
+    );
+
+    $form['category']['field_state_board_registration_n'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('State Board Registration Number'), 
+        '#size' =&gt; 60,
+        // '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[69]['value'][0],
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+              ),
+            ),
+    );
+
+    $form['category']['field_eligible'] = array(
+        '#type' =&gt; 'select',
+        // '#required' =&gt; true,
+        '#title' =&gt; t('I am eligible for...'),
+        '#options' =&gt; array(
+            'FULL/NODIS' =&gt; 'Not eligible for a concession',
+            'FULL/RED50'    =&gt; 'Reduced Income concession',
+            'FULL/SPOUS'    =&gt; 'Spousal Concession',
+            'FULL/Yr'   =&gt; 'Graduate Concession',
+        ),
+        '#default_value' =&gt; $submission-&gt;data[22]['value'][0],
+        '#multiple' =&gt; false,
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+              ),
+            ),
+    );
+
+    $form['category']['field_my_spouse_is'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t('My Spouse is'), 
+        '#size' =&gt; 60,
+        // '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[70]['value'][0],
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/SPOUS'),
+              ),
+            ),
+    );
+
+    $form['category']['field_spouse_s_ava_member_number'] = array(
+        '#type' =&gt; 'textfield', 
+        '#title' =&gt; t("Spouse's AVA Member Number"), 
+        '#size' =&gt; 60,
+        // '#required' =&gt; TRUE,
+        '#default_value' =&gt; $submission-&gt;data[71]['value'][0],
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/SPOUS'),
+              ),
+            ),
+    );
+
+    $form['category']['field_spouse_membership_status'] = array(
+        '#type' =&gt;'checkbox', 
+        '#title' =&gt; t('Spouse Membership Status'),
+        '#default_value' =&gt; $submission-&gt;data[84]['value'][0],
+        '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/SPOUS'),
+              ),
+            ),
+    );
+
+    if($submission-&gt;data[87]['value'][0] == 'rejected') {
+        $stat = 0;
+    } else if($submission-&gt;data[87]['value'][0] == 'approved') {
+        $stat = 1;
+    } else {
+        $stat = 2;
+    }
+
+    $form['category']['field_membership_status'] = array(
+        '#type' =&gt;'radios', 
+        '#title' =&gt; t('Status'),
+        '#options' =&gt; array('Rejected','Approved'),
+        '#default_value' =&gt; $stat,
+        '#required' =&gt; TRUE,
+    );
+
+    $form['category']['field_payment_option'] = array(
+        '#type' =&gt;'radios', 
+        '#title' =&gt; t('Paid By'),
+        '#options' =&gt; array(
+            'CC' =&gt; 'Credit Card',
+            'PBTM' =&gt; 'Pay by the month'
+        ),
+        '#default_value' =&gt; $submission-&gt;data[58]['value'][0],
+        '#required' =&gt; TRUE,
+    );
+
+    $chapter_list = array();
+    $chapter_list_full = array();
+
+
+    $chapter_payment = array();
+    $sig_list = array();
+    $sig_payment = array();
+
+
+    $dues_list = array();
+    $dues_list_full = array();
+
+
+    $dues_payment = array();
+    $disabled_chapter = array();
+    $all_payment = array();
+    $stud_choosen = 0;
+
+    // if($submission-&gt;data[38]['value'][0] == 1){
+        // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; $submission-&gt;data[22]['value'][0])), true);
+    // } else if($submission-&gt;data[38]['value'][0] == 0 &amp;&amp; $submission-&gt;data[40]['value'][0] != "" &amp;&amp; $submission-&gt;data[42]['value'][0] == "STUDN"){
+        // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'STUDN')), true);
+        // $stud_choosen = 1;
+    // }
+    $pricing_list = json_decode(ava_websignup_api_call('GET', 'api/get_all_pricing'), true);
+    if(isset($pricing_list) &amp;&amp; !empty($pricing_list)){
+
+        foreach($pricing_list as $key=&gt;$value){
+
+        // $now = intval(date("n")); // this will be used during final implementation.
+            $now = 2; // $now is the month of application. This is defaulted to 1(january) for testing purpose only.
+            if($now &lt;= 3){
+                $deducted_price = ($value['BASE_1']-($value['BASE_1']*.50));
+            } else if($now &gt;= 4 &amp;&amp; $now &lt;= 9){
+                $deducted_price = $value['BASE_1'];
+            } else {
+                $deducted_price = ($value['BASE_1']-($value['BASE_1']*.25));
+            }
+
+            if($value['PROD_TYPE'] == "CHAPT"){
+                if($value['CUSTOMER_TYPE'] == "FULL"){
+                    $chapter_list_full[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                    $all_payment_full[$value['PRODUCT_CODE']] = $deducted_price;
+
+                    $all_title_full[$value['PRODUCT_CODE']] = $value['TITLE'];  
+                } else if($value['CUSTOMER_TYPE'] == "FULL/RED50"){
+                    $chapter_list_red[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                    $all_payment_red[$value['PRODUCT_CODE']] = $deducted_price;
+
+                    $all_title_red[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];  
+                } else if($value['CUSTOMER_TYPE'] == "FULL/SPOUS"){
+                    // $chapter_list_spouse[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    // $all_payment_spouse[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $deducted_price;
+                    $chapter_list_spouse[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                    $all_payment_spouse[$value['PRODUCT_CODE']] = $deducted_price;
+
+                    $all_title_spouse[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];   
+                } else if($value['CUSTOMER_TYPE'] == "FULL/YR1"){
+                    $chapter_list_yr1[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                    $all_payment_yr1[$value['PRODUCT_CODE']] = $deducted_price;
+
+                    $all_title_yr1[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];  
+                } else if($value['CUSTOMER_TYPE'] == "FULL/YR2"){
+                    $chapter_list_yr2[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                    $all_payment_yr2[$value['PRODUCT_CODE']] = $deducted_price;
+
+                    $all_title_yr2[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];  
+                } else if($value['CUSTOMER_TYPE'] == "FULL/YR3"){
+                    $chapter_list_yr3[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                    $all_payment_yr3[$value['PRODUCT_CODE']] = $deducted_price;
+
+                    $all_title_yr3[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];  
+                }
+
+                /* if($stud_choosen == 0){
+                    if($form_state['storage']['submitted'][10] == $value['PRODUCT_CODE']){
+                        $chapter_default = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+                    } else {
+                        array_push($disabled_chapter,$value['PRODUCT_CODE']."|".$value['BASE_1']);
+                    }
+                } else {
+                    $the_chap = explode("|",$form_state['storage']['submitted'][17]);
+                    if(substr($value['PRODUCT_CODE'],6) == $the_chap[1]){
+                        $chapter_default = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+                    } else {
+                        array_push($disabled_chapter,$value['PRODUCT_CODE']."|".$value['BASE_1']);
+                    }
+                } */
+
+            } else if($value['PROD_TYPE'] == "SEC"){
+                //  $sig_list[$value['PRODUCT_CODE']."_".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                //  $all_payment[$value['PRODUCT_CODE']."_".$value['BASE_1']] = $deducted_price;
+
+                $sig_list[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                $all_title[$value['PRODUCT_CODE']] = $value['TITLE'];
+                $all_payment[$value['PRODUCT_CODE']] = $deducted_price;
+
+
+
+                // $form['category']['field_sig']['#options'] = $sig_list;
+
+                // $form['submitted']['sig_options']['#theme'] = array('ava_websignup_multicolumn_options');  
+                // $form['submitted']['sig_options']['#columns'] = 2;   
+                //$form['submitted']['sig_options']['#value'] = $sig_list['SG_AAHVJA|90.00'];
+
+            } else {
+                // $dues_list_full[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                // $all_payment[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $deducted_price;
+                // $dues_default = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+                // $all_title[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];
+
+                if($value['CUSTOMER_TYPE'] == "FULL"){
+                    $dues_list_full[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    $dues_default_full = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+
+                } else if($value['CUSTOMER_TYPE'] == "FULL/RED50"){
+                    $dues_list_red[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    $dues_default_red = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+
+                } else if($value['CUSTOMER_TYPE'] == "FULL/SPOUS"){
+                    $dues_list_spouse[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    $dues_default_spouse = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+
+                } else if($value['CUSTOMER_TYPE'] == "FULL/YR1"){
+                    $dues_list_yr1[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    $dues_default_yr1 = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+
+                } else if($value['CUSTOMER_TYPE'] == "FULL/YR2"){
+                    $dues_list_yr2[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    $dues_default_yr2 = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+
+                } else if($value['CUSTOMER_TYPE'] == "FULL/YR3"){
+                    $dues_list_yr3[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    $dues_default_yr3 = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+
+                }
+            }
+        }
+        // print_r($dues_list_full);
+
+        $all_payment_array = $all_payment;
+        $all_payment = json_encode($all_payment);
+
+        $form['submitted']['chapter']['#options'] = $chapter_list;  
+        $form['submitted']['chapter']['#theme'] = array('ava_websignup_multicolumn_options');  
+        $form['submitted']['chapter']['#columns'] = 2;
+        $form['submitted']['chapter']['#default_value'] = $chapter_default;  
+        foreach($disabled_chapter as $key =&gt; $value){
+            $form['submitted']['chapter'][$value] = array('#disabled' =&gt; TRUE,);
+        }
+
+        $form['submitted']['national_subscription']['#options'] = $dues_list;  
+        $form['submitted']['national_subscription']['#default_value'] = $dues_default; 
+
+
+        $form['submitted']['all_payment']['#value'] = $all_payment_array;
+        $form['submitted']['all_title']['#value'] = $all_title;
+
+        $sig_tid = array();
+        foreach($submission-&gt;data[51]['value'] as $id){
+            $sig_tid[] = $id;
+        }
+
+    }
+// for full no dis
+$form['payment'] = array(
+    '#type' =&gt; 'fieldset', 
+    '#title' =&gt; t(''), 
+    '#collapsible' =&gt; FALSE, 
+); 
+
+/* a1 national starts here */
+$form['payment']['paid_a1national_full'] = array ( 
+'#type' =&gt;'radios', 
+'#title' =&gt; t('National Subscription'),
+'#default_value' =&gt; $dues_default_full,
+'#options' =&gt; $dues_list_full,
+'#states' =&gt; array(
+          'visible' =&gt; array(   // action to take.
+            ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+            ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/NODIS'),
+          ),
+        ),
+);
+
+$form['payment']['paid_a1national_red'] = array(
+'#type' =&gt;'radios', 
+'#title' =&gt; t('National Subscription'),
+'#default_value' =&gt; $dues_default_red,
+'#options' =&gt; $dues_list_red,
+'#states' =&gt; array(
+          'visible' =&gt; array(   // action to take.
+            ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+            ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/RED50'),
+          ),
+        ),
+);
+
+$form['payment']['paid_a1national_spouse'] = array(
+'#type' =&gt;'radios', 
+'#title' =&gt; t('National Subscription spousal'),
+// '#default_value' =&gt; $submission-&gt;data[64]['value'][0],
+'#default_value' =&gt; $dues_default_spouse,
+'#options' =&gt; $dues_list_spouse,
+'#states' =&gt; array(
+          'visible' =&gt; array(   // action to take.
+            ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+            ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/SPOUS'),
+          ),
+        ),
+);
+
+$form['payment']['paid_a1national_yr1'] = array(
+'#type' =&gt;'radios', 
+'#title' =&gt; t('National Subscription yr1'),
+'#default_value' =&gt; $dues_default_yr1,
+'#options' =&gt; $dues_list_yr1,
+'#states' =&gt; array(
+          'visible' =&gt; array(   // action to take.
+            ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+            ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/Yr'),
+          ),
+        ),
+);
+
+$form['payment']['paid_a1national_yr2'] = array(
+'#type' =&gt;'radios', 
+'#title' =&gt; t('National Subscription yr2'),
+'#default_value' =&gt; $dues_default_yr2,
+'#options' =&gt; $dues_list_yr2,
+'#states' =&gt; array(
+          'visible' =&gt; array(   // action to take.
+            ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+            ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/Yr'),
+          ),
+        ),
+);
+
+$form['payment']['paid_a1national_yr3'] = array(
+'#type' =&gt;'radios', 
+'#title' =&gt; t('National Subscription yr3'),
+'#default_value' =&gt; $dues_default_yr3,
+'#options' =&gt; $dues_list_yr3,
+'#states' =&gt; array(
+          'visible' =&gt; array(   // action to take.
+            ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+            ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/Yr'),
+          ),
+        ),
+);
+/* a1 national end here */
+/* chapter starts here */
+$form['payment']['paid_chapter_full'] = array(
+    '#type' =&gt;'radios', 
+    '#title' =&gt; t('Chapter full'),
+    // '#default_value' =&gt; $submission-&gt;data[63]['value'][0],
+    '#options' =&gt; $chapter_list_full,
+    '#disabled' =&gt; TRUE,
+    '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/NODIS'),
+              ),
+            ),
+);
+
+$form['payment']['paid_chapter_red'] = array(
+    '#type' =&gt;'radios', 
+    '#title' =&gt; t('Chapter red'),
+    '#default_value' =&gt; $submission-&gt;data[63]['value'][0],
+    '#options' =&gt; $chapter_list_red,
+    '#disabled' =&gt; TRUE,
+    '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/RED50'),
+              ),
+            ),
+);
+
+$form['payment']['paid_chapter_spouse'] = array(
+    '#type' =&gt;'radios', 
+    '#title' =&gt; t('Chapter spouse'),
+    '#default_value' =&gt; $submission-&gt;data[63]['value'][0],
+    '#options' =&gt; $chapter_list_spouse,
+    '#disabled' =&gt; TRUE,
+    '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/SPOUS'),
+              ),
+            ),
+);
+
+$form['payment']['paid_chapter_yr1'] = array(
+    '#type' =&gt;'radios', 
+    '#title' =&gt; t('Chapter yr1'),
+    '#default_value' =&gt; $submission-&gt;data[63]['value'][0],
+    '#options' =&gt; $chapter_list_yr1,
+    '#disabled' =&gt; TRUE,
+    '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/Yr'),
+              ),
+            ),
+);
+
+$form['payment']['paid_chapter_yr2'] = array(
+    '#type' =&gt;'radios', 
+    '#title' =&gt; t('Chapter yr2'),
+    '#default_value' =&gt; $submission-&gt;data[63]['value'][0],
+    '#options' =&gt; $chapter_list_yr2,
+    '#disabled' =&gt; TRUE,
+    '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/Yr'),
+              ),
+            ),
+);
+
+$form['payment']['paid_chapter_yr3'] = array(
+    '#type' =&gt;'radios', 
+    '#title' =&gt; t('Chapter yr3'),
+    '#default_value' =&gt; $submission-&gt;data[63]['value'][0],
+    '#options' =&gt; $chapter_list_yr3,
+    '#disabled' =&gt; TRUE,
+    '#states' =&gt; array(
+              'visible' =&gt; array(   // action to take.
+                ':input[name=field_type_category]' =&gt; array('value' =&gt; 1),
+                ':input[name=field_eligible]' =&gt; array('value' =&gt; 'FULL/Yr'),
+              ),
+            ),
+);
+/* chapter end here */
+
+$form['payment']['field_sig'] = array(
+'#type' =&gt;'checkboxes', 
+'#title' =&gt; t('Special Interest Groups'),
+'#default_value' =&gt; $sig_tid,
+'#options' =&gt; $sig_list,
+);
+
+$form['webform_id'] = array(
+    '#type' =&gt; 'hidden',
+    '#value' =&gt; $node-&gt;webform_id,
+); 
+
+$form['submission_id'] = array(
+    '#type' =&gt; 'hidden',
+    '#value' =&gt; $node-&gt;submission_id,
+); 
+
+$form['submit'] = array(
+  '#type' =&gt; 'submit',
+  '#value' =&gt; t('Submit'),
+);
+
+return $form;
+</code></pre>
+
+<p>}</p>
+
+<p>function ava_web_signup_review_form_validate($form, &amp;$form_state) {
+    // print_r($form_state);die();
+    if(!valid_email_address($form_state['values']['field_avawebsignup_email_address'])){
+        form_set_error('field_avawebsignup_email_address',"Please supply a valid email address");
+    }
+    // this is used when a field type category is veterenarian.
+    if($form_state['values']['field_type_category'] == 1){
+        if($form_state['values']['field_university_vet'] == "" || empty($form_state['values']['field_university_vet'])){
+            form_set_error('field_university_vet',"Please select university");
+        }
+        if(!is_numeric($form_state['values']['field_year_of_completion'])) {
+            form_set_error('field_year_of_completion',"Please input valid data for year of completion");
+        }
+        if($form_state['values']['field_state_board_registered'] == "" || empty($form_state['values']['field_state_board_registered'])){
+            form_set_error('field_state_board_registered',"Please select state board Registered");
+        }
+        if($form_state['values']['field_state_board_registration_n'] == "" || empty($form_state['values']['field_state_board_registration_n'])){
+            form_set_error('field_state_board_registration_n',"Please input state board registration number");
+        }
+        if($form_state['values']['field_eligible'] == 'FULL/SPOUS'){
+            if($form_state['values']['field_my_spouse_is'] == "" || empty($form_state['values']['field_my_spouse_is'])){
+                form_set_error('field_my_spouse_is',"Please input your spouse name");
+            }
+            if($form_state['values']['field_spouse_s_ava_member_number'] == "" || empty($form_state['values']['field_spouse_s_ava_member_number'])){
+                form_set_error('field_spouse_s_ava_member_number',"Please input your spouse member number");
+            }
+        }
+    }</p>
+
+<p>} </p>
+
+<p>function ava_web_signup_review_form_submit($form, &amp;$form_state) {
+    $webform = node_load($form_state['values']['webform_id']);
+    $submission = webform_get_submission($form_state['values']['webform_id'],$form_state['values']['submission_id']);
+    // $submission-&gt;data[65]['value'][0] = $form_state['values']['field_first_name'];
+    $submission-&gt;data[4]['value'][0] = $form_state['values']['field_first_name'];
+    $submission-&gt;data[5]['value'][0] = $form_state['values']['field_last_name'];
+    $submission-&gt;data[6]['value'][0] = $form_state['values']['field_middle_name'];
+    $submission-&gt;data[7]['value'][0] = $form_state['values']['field_date_of_birth'];
+    $submission-&gt;data[8]['value'][0] = $form_state['values']['field_gender'];
+    $submission-&gt;data[11]['value'][0] = $form_state['values']['field_postal_street_address'];
+    $submission-&gt;data[9]['value'][0] = $form_state['values']['field_avawebsignup_city'];
+    $submission-&gt;data[10]['value'][0] = $form_state['values']['field_postal_state'];
+    $submission-&gt;data[12]['value'][0] = $form_state['values']['field_postal_postcode'];
+    $submission-&gt;data[13]['value'][0] = $form_state['values']['field_telephone_no'];
+    $submission-&gt;data[14]['value'][0] = $form_state['values']['field_mobile_no'];
+    $submission-&gt;data[36]['value'][0] = $form_state['values']['field_avawebsignup_email_address'];
+    $submission-&gt;data[39]['value'][0] = $form_state['values']['field_decision_factor'];</p>
+
+<pre><code>$submission-&gt;data[38]['value'][0] = $form_state['values']['field_type_category'];
+
+/* if($form_state['values']['field_type_category'] == 0) {
+    $submission-&gt;data[17]['value'][0] = $form_state['values']['field_university_stud'];
+    $submission-&gt;data[66]['value'][0] = $form_state['values']['field_degree'];
+    $submission-&gt;data[67]['value'][0] = $form_state['values']['field_degree_year'];
+    $submission-&gt;data[42]['value'][0] = $form_state['values']['field_type_of_student_membership'];
+} */
+if($form_state['values']['field_type_category'] == 1){
+    $submission-&gt;data[40]['value'][0] = $form_state['values']['field_university_vet'];
+    $submission-&gt;data[41]['value'][0] = $form_state['values']['field_year_of_completion'];
+    $submission-&gt;data[68]['value'][0] = $form_state['values']['field_state_board_registered'];
+    $submission-&gt;data[69]['value'][0] = $form_state['values']['field_state_board_registration_n'];
+    $submission-&gt;data[22]['value'][0] = $form_state['values']['field_eligible'];
+    if($form_state['values']['field_eligible'] == 'FULL/SPOUS'){
+        $submission-&gt;data[70]['value'][0] = $form_state['values']['field_my_spouse_is'];
+        $submission-&gt;data[71]['value'][0] = $form_state['values']['field_spouse_s_ava_member_number'];
+        if($form_state['values']['field_spouse_membership_status'] == 1){
+            $submission-&gt;data[84]['value'][0] = $form_state['values']['field_spouse_membership_status'];
+        }
+    }
+
+    if($form_state['values']['field_eligible'] == 'FULL/NODIS'){
+        $final_a1 = $form_state['values']['paid_a1national_full'];
+    } else if($form_state['values']['field_eligible'] == 'FULL/RED50'){
+        $final_a1 = $form_state['values']['paid_a1national_red'];
+    } else if($form_state['values']['field_eligible'] == 'FULL/SPOUS'){
+        $final_a1 = $form_state['values']['paid_a1national_spouse'];
+    } else if($form_state['values']['field_eligible'] == 'FULL/Yr'){
+        $final_a1 = $form_state['values']['paid_a1national_yr1'];
+    }
+
+    $submission-&gt;data[64]['value'][0] = $final_a1;
+    $submission-&gt;data[63]['value'][0] = $form_state['values']['field_postal_state'];
+
+    $sig_counter = 0;
+    /* foreach($form_state['values']['field_sig'] as $key=&gt;$value){
+        if($value != "" &amp;&amp; $value != "0"){
+            // echo $key." = ".$value;
+            $submission-&gt;data[51]['value'][$sig_counter] = $value;
+            $sig_counter++;
+        }
+    } */
+    $the_sig = array();
+    foreach($form_state['values']['field_sig'] as $key=&gt;$value){
+        if($value != "" &amp;&amp; $value != "0"){
+            array_push($the_sig,$value);
+        }
+    } 
+    $submission-&gt;data[51]['value'] = $the_sig;
+}
+
+
+if($form_state['values']['field_membership_status'] == 0) {
+    $new_stat = 'rejected';
+} else if($form_state['values']['field_membership_status'] == 1) {
+    $new_stat = 'approved';
+} else {
+    $new_stat = '';
+}
+$submission-&gt;data[87]['value'][0] = $new_stat;
+
+
+$submission-&gt;data[58]['value'][0] = $form_state['values']['field_payment_option'];
+webform_submission_update($webform, $submission);
+</code></pre>
+
+<p>} </p>
+
+<p>?&gt;</p>
       </section>
     </div>
 
