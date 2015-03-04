@@ -1,0 +1,2314 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Membership websignup : ">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Membership websignup</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/jlmwebhosting/membership_websignup">View on GitHub</a>
+
+          <h1 id="project_title">Membership websignup</h1>
+          <h2 id="project_tagline"></h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/jlmwebhosting/membership_websignup/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/jlmwebhosting/membership_websignup/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>Welcome to Membership Web Signup</p>
+
+<p>membership_websignup.info:</p>
+
+<p>; $Id $
+name = Websignup
+core = 7.x</p>
+
+<p>membership_websignup.module:</p>
+
+<p>&lt;?php
+    define("WEBSIGNUP_API", "<a href="http://10.0.0.127/ava/">http://10.0.0.127/ava/</a>");
+    require_once("ChromePhp.php");
+    function ava_websignup_menu() {</p>
+
+<pre><code>    $items['web_signup/%/review'] = array(
+    'title' =&gt; t('Membership and Web sign-up - Review'),
+    'page callback' =&gt; 'drupal_get_form',
+    'page arguments' =&gt; array('ava_web_signup_review_form', 1),
+    'access callback'  =&gt; 'user_access',
+    'access arguments' =&gt; array('administer admin membership and web sign-up'),
+    'description' =&gt; t('Form for web sign-up'),
+    'file' =&gt; 'web_signup_review.inc',
+    'type' =&gt; MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+function ava_websignup_permission() {
+  return array(
+    'administer admin membership and web sign-up' =&gt; array(
+      'title' =&gt; t('Administer membership and web sign-up module settings'),
+      'description' =&gt; t('This is a custom admin permission for membership and web sign-up'),
+    ),
+  );
+}
+
+function ava_websignup_api_call($method, $url, $data = false){
+    $curl = curl_init();
+
+    switch ($method)
+    {
+        case "POST":
+            curl_setopt($curl, CURLOPT_POST, 1);
+
+            if ($data)
+                curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+            break;
+        case "PUT":
+            curl_setopt($curl, CURLOPT_PUT, 1);
+            break;
+        default:
+            if ($data)
+                $url = sprintf("%s?%s", $url, http_build_query($data));
+    }
+
+    //curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-type: application/json",  'Content-Length: ' . strlen($data), 'Expect: '));
+    //curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1); 
+    curl_setopt($curl, CURLOPT_URL, WEBSIGNUP_API.$url);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+
+    return curl_exec($curl);
+}
+
+
+function ava_websignup_webform_submission_presave($node, &amp;$submission){
+
+} 
+
+
+function ava_websignup_application_calculate_price($submission, $node){
+
+    $all_payment = $submission-&gt;data[85]['value'];
+
+    $total = 0;
+
+    foreach($submission-&gt;data[51]['value'] as $sig){
+        $total += $all_payment[$sig];
+    }
+
+    $total += $all_payment[$submission-&gt;data[64]['value'][0]]; //this is for national subscription
+    $total += $all_payment[$submission-&gt;data[63]['value'][0]]; //this is for national subscription
+
+
+    return $total; 
+
+}
+
+/**
+ * Calculate the description for the cart from a webform submission
+ * @param $webform_id
+ *     The nid of the webform
+ * @param $submission_id
+ *     The submission id of the webform
+ * @return
+ *     The price of the application
+ */
+function ava_websignup_application_calculate_description($submission, $node) {
+
+    $description = '';
+
+    $all_payment = $submission-&gt;data[85]['value'];
+    $all_title = $submission-&gt;data[86]['value'];    
+
+    $description .= $all_title[$submission-&gt;data[64]['value'][0]] . ': ' . uc_currency_format($all_payment[$submission-&gt;data[64]['value'][0]]) . '&lt;br /&gt;'; //national subscription
+    $description .= $all_title[$submission-&gt;data[63]['value'][0]] . ': ' . uc_currency_format($all_payment[$submission-&gt;data[63]['value'][0]]) . '&lt;br /&gt;'; //chapter
+
+    foreach($submission-&gt;data[51]['value'] as $sig){
+         $description .= $all_title[$sig] . ': ' . uc_currency_format($all_payment[$sig]) . '&lt;br /&gt;'; //sig
+    }
+
+    return $description;
+}
+
+function ava_websignup_webform_submission_insert($node, $submission) {
+
+    $node1 = new stdClass();
+    $node1-&gt;type = 'ava_membership_application';
+    node_object_prepare($node1);
+    $node1-&gt;title = t('Membership application (Application ID !id)', array('!id' =&gt; $submission-&gt;sid));
+    $node1-&gt;language = LANGUAGE_NONE;
+    // Modified here
+    // $node-&gt;webform_id = $submission_info-&gt;nid;
+    $node1-&gt;webform_id = $submission-&gt;nid;
+    $node1-&gt;submission_id = $submission-&gt;sid; //$sid;
+    // $node-&gt;uid = $submission_info-&gt;uid;
+    $node1-&gt;uid = $submission-&gt;uid;
+
+    /* Trapped MalformedEntity in DRUPAL 7 */
+    $node1-&gt;model = 'MEMBERSHIP/'.$submission-&gt;sid; 
+    $node1-&gt;list_price = ava_websignup_application_calculate_price($submission, $node);
+    $node1-&gt;cost = ava_websignup_application_calculate_price($submission, $node);
+    $node1-&gt;sell_price = ava_websignup_application_calculate_price($submission, $node);
+    $node1-&gt;default_qty = 1;
+    $node1-&gt;pkg_qty = 1;
+    $node1-&gt;length =0;
+    $node1-&gt;width = 0;
+    $node1-&gt;height = 0;
+    $node1-&gt;shippable = 0;
+
+    $node1-&gt;status = 1;
+
+//  print_r($node); die();
+    node_save($node1);
+
+    if ($node-&gt;nid == 61802) {
+        if($submission-&gt;data[58]['value'][0] == "PBTM"){
+
+            $result = webform_get_submission($node1-&gt;webform_id,$node1-&gt;submission_id);         
+
+            switch ($result-&gt;data[65]['value'][0]){
+                case 0:
+                    $title = "Miss";
+                    break;
+                case 1:
+                    $title = "Mr";
+                    break;
+                case 2:
+                    $title = "Mrs";
+                    break;
+                case 3:
+                    $title = "Ms";
+                    break;
+                case 4:
+                    $title = "Dr";
+                    break;
+                case 5:
+                    $title = "Prof";
+                    break;
+                default:
+                    $title = "Dr";
+                    break;
+            }
+
+            $middle_name = $result-&gt;data[6]['value'][0] != "" ? strtoupper(substr($result-&gt;data[6]['value'][0], 0, 1)).". " : " ";
+
+            $all_payment = $result-&gt;data[85]['value'];
+            $all_title = $result-&gt;data[86]['value'];
+            $total12 = 0;
+            $a1_national_price = $all_payment[$result-&gt;data[64]['value'][0]];
+            $chapt_price = $all_payment[$result-&gt;data[63]['value'][0]];
+            $total12 += $all_payment[$result-&gt;data[64]['value'][0]];
+            $total12 += $all_payment[$result-&gt;data[63]['value'][0]];
+            $subscriptions_details = '&lt;tr&gt;
+                &lt;td&gt;'.$all_title[$result-&gt;data[64]['value'][0]].'&lt;/td&gt;
+                &lt;td align="right"&gt;'.uc_currency_format($all_payment[$result-&gt;data[64]['value'][0]]).'&lt;/td&gt;
+            &lt;/tr&gt;
+            &lt;tr&gt;
+                &lt;td&gt;'.$all_title[$result-&gt;data[63]['value'][0]].'&lt;/td&gt;
+                &lt;td align="right"&gt;'.uc_currency_format($all_payment[$result-&gt;data[63]['value'][0]]).'&lt;/td&gt;
+            &lt;/tr&gt;';
+
+            foreach ($result-&gt;data[51]['value'] as $value){
+                $subscriptions_details .= '&lt;tr&gt;
+                        &lt;td&gt;'.$all_title[$value].'&lt;/td&gt;
+                        &lt;td align="right"&gt;'.uc_currency_format($all_payment[$value]).'&lt;/td&gt;
+                    &lt;/tr&gt;';
+                $total12 += $all_payment[$value];
+            }
+
+
+
+
+            $html = '&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"&gt;&lt;html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" lang="en"&gt;&lt;head&gt;&lt;meta http-equiv="content-type" content="text/html; charset=UTF-8"&gt;&lt;title&gt;Direct Debit (DDR) Request&lt;/title&gt;&lt;style type="text/css"&gt;html,body,h1{margin: 0;}body{font-size: 12px;font-family: Arial;padding: 40px 20px;}.container{border: 1px solid #000;padding: 10px 10px 10px 20px;page-break-after: always;}table{width: 100%;}hr{border: none;border-bottom: 1px solid #000;}ol{padding: 0 10px 0 20px;}ol li{margin: 0 0 10px 0;line-height: 1.25;}.abc-list{list-style-type: lower-alpha;}.abc-list li{margin: 4px 0;}.invisible{visiblity: hidden;position: absolute;left: 999px;}.unstyled{list-style: none;}.ib{display: inline-block;vertical-align: bottom;}.tfield{border: 1px solid #000;height: 13px;padding: 5px;}.pt-24{padding: 24px 0 0 0;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;img src="http://www.ava.com.au/sites/default/files/AVATheme_logo.gif"&gt;&lt;br&gt;&lt;br&gt;&lt;div class="container"  &gt;&lt;h1&gt;Direct Debit (DDR) Request&lt;/h1&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td rowspan="3" width="106" valign="top"&gt;&lt;strong&gt;Customer\'s &lt;br&gt;Authority&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;I/We&lt;/strong&gt;&amp;nbsp;&amp;nbsp;&lt;span class="ib"&gt;Name of Customer/s giving the DDR&lt;div class="tfield" style="width:520px;"&gt;'.$title.". ".$result-&gt;data[4]['value'][0]." ".$middle_name." ".$result-&gt;data[5]['value'][0].'&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td valign="bottom"&gt;&lt;strong&gt;authorise and request the&lt;/strong&gt;&lt;span class="ib"&gt;Name of Debit User&lt;div class="tfield" style="width:230px;"&gt;The Australian Veterinary Association Ltd&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;td valign="bottom"&gt;&lt;span class="ib"&gt;APCA User&lt;br/&gt;ID number&lt;div class="tfield" style="width:100px;"&gt;402563&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;strong&gt;until further notice in writing, to arrange for funds to be debited through the Bulk Electronic Clearing System (BECS) from my/our account at the Financial Institution identified below as instructed by me/us or any other amounts as instructed or authorised to be debited in accordance with the terms and conditions of the Direct Debit Request Service Agreement (DDRSA) as amended from time to time.&lt;/strong&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;hr/&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td width="106" valign="top"&gt;&lt;strong&gt;Payment Details&lt;/strong&gt;&lt;/td&gt;&lt;td rowspan="2"&gt;This authority allows the debiting of amounts payable by the Customer under the Agreement between the Customer and &lt;strong&gt;The Australian Veterinary Association Ltd&lt;/strong&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;hr/&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td rowspan="4" valign="top" width="106"&gt;&lt;strong&gt;Details of the&lt;br/&gt;Account to be&lt;br/&gt;debited&lt;/strong&gt;&lt;br/&gt;All details must be&lt;br/&gt;supplied&lt;/td&gt;&lt;td valign="top"&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td valign="bottom" width="50%"&gt;&lt;span class="ib"&gt;Name of the Financial Institution&lt;div class="tfield" style="width:230px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;td valign="bottom" width="50%"&gt;&lt;span class="ib"&gt;Branch name&lt;div class="tfield" style="width:230px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign="top"&gt;&lt;span class="ib"&gt;Account name (please insert your name in full)&lt;div class="tfield" style="width:550px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td valign="top"&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td valign="bottom" width="20%"&gt;&lt;span class="ib"&gt;BSB number&lt;div class="tfield" style="width:80px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;td valign="bottom" width="30%"&gt;&lt;span class="ib"&gt;Account number&lt;div class="tfield" style="width:130px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;td valign="bottom" width="40%"&gt;&lt;span class="ib"&gt;ABN/ARBN (if applicable)&lt;div class="tfield" style="width:160px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;strong&gt;Note:&lt;/strong&gt; Direct debiting is not available on the full range of accounts. If in doubt, please refer to your bank/financial institution.&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;hr/&gt;&lt;hr/&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td width="106" valign="top" rowspan="3"&gt;&lt;strong&gt;Customer&lt;br/&gt;Authorisation&lt;/strong&gt;&lt;br/&gt;If in join name/s&lt;br/&gt;both signatures&lt;br/&gt;may be required&lt;/td&gt;&lt;td&gt;By signing below, I/we acknowledge that this Direct Debit arrangement is governed by the terms of Authorisation the DDRSA attached to this request.&lt;br/&gt;&lt;br/&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td valign="bottom" width="50%"&gt;&lt;span class="ib"&gt;Signature&lt;div class="tfield" style="width:230px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;td valign="bottom" width="50%"&gt;&lt;span class="ib"&gt;Signature&lt;div class="tfield" style="width:230px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td valign="bottom" width="50%"&gt;&lt;span class="ib"&gt;Date&lt;div class="tfield" style="width:130px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;td valign="bottom" width="50%"&gt;&lt;span class="ib"&gt;Date&lt;div class="tfield" style="width:130px;"&gt;&lt;/div&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;div align="center"&gt;&lt;strong&gt;Once signed, this request should be returned to the AVA by facsimile on 02 9437 9068&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;&lt;br/&gt;&lt;div class="container" &gt;&lt;h2&gt;Direct Debit Request Service Agreement (DDRSA)&lt;/h2&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td valign="top" width="50%"&gt;&lt;ol&gt;&lt;li&gt;By signing the Direct Debit Request, you authorise us to arrange for funds to be debited from your Account in accordance with the Agreement.&lt;/li&gt;&lt;li&gt;We will advise you 14 days in advance of any changes to the Direct Debit Request.&lt;/li&gt;&lt;li&gt;For all matters relating to the Direct Debit Request, including cancellation, alteration or suspension of drawing arrangements or to stop or defer a payment, or to investigate or dispute a previous payment, you should:&lt;ol class="abc-list"&gt;&lt;li&gt;Contact AVA Membership 1300 137 309&lt;br/&gt;&lt;strong&gt;And&lt;/strong&gt;&lt;/li&gt;&lt;li&gt;Allow for 14 days for the amendments to take effect or to respond to a dispute.&lt;/li&gt;&lt;/ol&gt;If our investigations show that your Account has been incorrectly debited, we will arrange for the Financial Institution to adjust your Account accordingly. We will also notify you in writing of the amount by which your Account has been adjusted. If, following our investigations, we believe on reasonable grounds that your Account has been correctly debited, we will respond to your query by providing you with reasons and copies of any evidence for this finding.If we cannot resolve the matter, you can still refer it to your Financial Institution, which will obtain details from you of the disputed payment and may lodge a claim on your behalf.&lt;/li&gt;&lt;li&gt;You should be aware that:&lt;ol class="abc-list"&gt;&lt;li&gt;direct debiting through the Bulk Electronic Clearing System (BECS) is not available on all accounts; and&lt;/li&gt;&lt;li&gt;You should check your Account details (including the Bank State Branch (BSB) number) directly against a recent statement from your Financial Institution.&lt;/li&gt;&lt;/ol&gt;If you are in any doubt, please check with your Financial Institution before completing the drawing authority.&lt;/li&gt;&lt;li&gt;It is your responsibility to ensure that:&lt;ol class="abc-list"&gt;&lt;li&gt;sufficient cleared funds are in the Account when the payments are to be drawn;&lt;/li&gt;&lt;li&gt;the authorisation to debit the Account is in the same name as the Account signing instruction held by the Financial Institution where the Account is held;&lt;/li&gt;&lt;li&gt;suitable arrangements are made if the direct debit is cancelled:&lt;ul class="unstyled"&gt;&lt;li&gt;- by yourself;&lt;/li&gt;&lt;li&gt;- by your Financial Institution; or&lt;/li&gt;&lt;li&gt;- For any other reason.&lt;/li&gt;&lt;/ul&gt;&lt;/li&gt;&lt;/ol&gt;&lt;/li&gt;&lt;li&gt;If the due date for payment falls on a day other than a Banking Business Day, the payment will be processed on the next Banking Business Day. If you are uncertain when the payment will be debited from your Account, please check with your Financial Institution.&lt;/li&gt;&lt;/ol&gt;&lt;/td&gt;&lt;td valign="top" width="50%"&gt;&lt;ol&gt;&lt;li class="invisible"&gt;&lt;/li&gt;&lt;li class="invisible"&gt;&lt;/li&gt;&lt;li class="invisible"&gt;&lt;/li&gt;&lt;li class="invisible"&gt;&lt;/li&gt;&lt;li class="invisible"&gt;&lt;/li&gt;&lt;li class="invisible"&gt;&lt;/li&gt;&lt;li&gt;For returned unpaid transactions, the following procedures or policies will apply:&lt;ol class="abc-list"&gt;&lt;li&gt;we treat the payment as if it was never made;&lt;/li&gt;&lt;li&gt;services may be suspended until the outstanding charges are paid; and/or&lt;/li&gt;&lt;li&gt;A fee may be applied for drawings that are returned unpaid. We reserve the right to cancel the Direct Debit Request at any time if drawings are turned unpaid by your Financial Institution.&lt;/li&gt;&lt;/ol&gt;&lt;/li&gt;&lt;li&gt;All Customer records and Account details will be kept private and confidential to be disclosed only at your request or at the request of the Financial Institution in connection with a claim made to correct/investigate an alleged incorrect or wrongful debit or otherwise as required by law.&lt;/li&gt;&lt;li&gt;If any provision of this DDRSA is found to be illegal, void or unenforceable for unfairness or any other reason (for example, if a court or other tribunal or authority declares it so), the remaining provisions of this DDRSA will continue to apply to the extent possible as if the void or unenforceable provision had never existed.&lt;/li&gt;&lt;/ol&gt;&lt;div&gt;&lt;h4 style="margin:20px 0 10px 0;"&gt;Definitions&lt;/h4&gt;Unless otherwise defined, a term defined in the Agreement has the same meaning when used in this DDRSA and:&lt;br/&gt;&lt;br/&gt;Account means the account nominated in the Direct Debit Request, held at your Financial Institution from which we are authorised to arrange for funds to be debited;&lt;br/&gt;&lt;br/&gt;Agreement means the Terms and Conditions (including BPAY), including the Schedules to those Terms and Conditions, as amended from time to time;&lt;br/&gt;&lt;br/&gt;Direct Debit Request means the Direct Debit Request between us and you as amended from time to time;&lt;br/&gt;&lt;br/&gt;Financial Institution is the financial institution where you hold the account nominated in your Direct Debit Request as the account from which we are authorised to arrange for funds to be debited;&lt;br/&gt;&lt;br/&gt;&lt;strong&gt;We&lt;/strong&gt; means &lt;strong&gt;The Australian Veterinary Association Ltd&lt;/strong&gt; ; and&lt;br/&gt;&lt;br/&gt;You mean the Customer/s who signed the Direct Debit Request.&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;';
+
+        //  $member12 = $result-&gt;data[22]['value'][0];
+
+            if($result-&gt;data[22]['value'][0]  == 'FULL/Yr'){
+                $yr_member1 = intval(date("Y")) - intval($result-&gt;data[41]['value'][0]);
+                if($yr_member1 &lt;=1){
+                    // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR1')), true);
+                    $member12 = 'FULL/YR1';
+                } else if($yr_member1 ==2){
+                    // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR2')), true);
+                    $member12 = 'FULL/YR2';
+                } else {
+                    // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR3')), true);
+                    $member12 = 'FULL/YR3';
+                }
+            }else if($result-&gt;data[42]['value'][0]  == 'STUDN'){
+                $member12 = 'STUDN/STUDN';  
+            } else{
+                $member12 = $result-&gt;data[22]['value'][0];  
+            }
+
+            $member12_type = explode('/', $member12);
+
+            $day_now = intval(date("j"));
+            $month_now = intval(date("n"));
+            $year_now = intval(date("Y"));
+            if($day_now &lt;= 15){
+                if($month_now &lt;= 3){
+                    $total_month = 7 - $month_now;
+                    $expire_year_wew = $year_now;
+                } else if($month_now &gt;= 4 &amp;&amp; $month_now &lt;= 9){
+                    $total_month = 19 - $month_now;
+                    $expire_year_wew = intval($year_now)+1;
+                } else {
+                    $total_month = 19 - $month_now;
+                    $expire_year_wew = intval($year_now)+1;
+                }
+            } else {
+                if($month_now &lt;= 3){
+                    $total_month = 7 - ($month_now + 1);
+                    $expire_year_wew = $year_now;
+                } else if($month_now &gt;= 4 &amp;&amp; $month_now &lt;= 9){
+                    $total_month = 19 - ($month_now + 1);
+                    $expire_year_wew = intval($year_now)+1;
+                } else {
+                    $total_month = 19 - ($month_now + 1);
+                    $expire_year_wew = intval($year_now)+1;
+                }
+            }
+            $price_per_month = floatval($total12)/$total_month;
+
+
+                $html1 = '&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"&gt;
+</code></pre>
+
+<p></p>
+
+Direct Debit (DDR) Request
+
+
+    html,
+    body,
+    h1 {
+        margin: 0;
+    }
+
+    body {
+        font-size: 12px;
+        font-family: Arial;
+        padding: 40px;
+    }
+
+    .container {
+        border: 1px solid #000;
+        page-break-after: always;
+    }
+
+    table {
+        width: 100%;
+    }
+
+    hr {
+        border: none;
+        border-bottom: 3px solid #000;
+    }
+
+    ol {
+        padding: 0 10px 0 20px;
+    }
+
+    ol li {
+        margin: 0 0 10px 0;
+        line-height: 1.25;
+    }
+
+    .abc-list {
+        list-style-type: lower-alpha;
+    }
+
+    .abc-list li {
+        margin: 4px 0;
+    }
+
+    .invisible {
+        visiblity: hidden;
+        position: absolute;
+        left: 999px;
+    }
+
+    .unstyled {
+        list-style: none;
+    }
+
+    .right-box {
+        border: 1px solid #000;
+        line-height: 20px;
+    }
+
+    .normal-font {
+        font-size: 14px;
+        font-family: "Arial", sans-serif;
+    }
+
+    .und {
+        text-decoration: underline;
+    }
+
+    .collapsed {
+        border:1px solid #000;
+        border-collapse: collapse;
+    }
+
+    .collapsed tbody tr td {
+        border: 1px solid #000;
+    }
+
+    .small-label {
+        font-family: "Arial", sans-serif;
+        font-size: 10px;
+        font-weight: bold;
+        margin-left: 10px;
+    }
+
+    .faded-table tbody tr td  {
+        border: 1px solid #000;
+    }
+
+    .faded-table tbody tr td .small-label {
+        color: #999;
+    }
+
+
+<p>
+</p>
+    <h1>
+<a id="online-applications--direct-debit-option" class="anchor" href="#online-applications--direct-debit-option" aria-hidden="true"><span class="octicon octicon-link"></span></a>Online Applications – Direct Debit option</h1>
+    <div>
+        <table>
+            <tbody>
+                <tr>
+                    <td><img></td>
+                    <td valign="top">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="40%"></td>
+                                    <td width="60%">
+                                        <div>
+                                            <table>
+                                            <tbody>
+                                                <tr><td>Official Use Only:</td></tr>
+                                                <tr><td>ID:</td></tr>
+                                                <tr><td>Entered:</td></tr>
+                                            </tbody>
+                                        </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2"><h2>
+<a id="direct-debit-request-ddr-authorisation-form" class="anchor" href="#direct-debit-request-ddr-authorisation-form" aria-hidden="true"><span class="octicon octicon-link"></span></a>Direct Debit Request (DDR) Authorisation Form:</h2></td>
+                </tr>
+                <tr>
+                    <td>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="110"><strong>Web Application ID:</strong></td>
+                                    <td>['.$node-&gt;nid.']</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                    <td align="right">
+<strong>Date of Application:</strong> '.date('d/m/Y').'</td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="110"><strong>Name of Applicant:</strong></td>
+                                    <td>'.$title.". ".$result-&gt;data[4]['value'][0]." ".$middle_name." ".$result-&gt;data[5]['value'][0].'</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="110"><strong>Member Type:</strong></td>
+                                    <td>'.$member12_type[0].'</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="110"><strong>Member Category:</strong></td>
+                                    <td>'.$member12_type[1].'</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td colspan="2"><strong>Subscriptions Applied:</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="50%">
+                                        <table>
+                                            <tbody>
+                                                '.$subscriptions_details.'
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                    <td width="50%"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="0">
+                        <hr>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="50%">
+                                        <table>
+                                            <tbody>
+                                                <tr>
+                                                    <td><strong>Subtotal for Membership Year 2014 to 2015:</strong></td>
+                                                    <td align="right">'.uc_currency_format($total12).'</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                    <td width="50%"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+<strong>Installment information:</strong>'.uc_currency_format($price_per_month) .'/month - '.$total_month.' months remaining until June '.$expire_year_wew.'</td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="30"></td>
+                </tr>
+                <tr>
+                    <td valign="top"><strong>Customer’s Authority:</strong></td>
+                    <td>
+                        I, We '.$title.". ".$result-&gt;data[4]['value'][0]." ".$middle_name." ".$result-&gt;data[5]['value'][0].' authorise and request the Australian Veterinary Association Ltd APCA User ID 402563 until further notice in writing, to arrange for funds to be taken debited through the Bulk Electronic Clearing System (BECS) from my/our account at the Financial Institution identified below as instructed by me/us or any other amounts as instructed or authorised to be debited in accordance with the terms and conditions of the Direct Debit Service Request Service Agreement (DDRSA) as amended from time to time.
+                        <br>
+                        <br>
+                    </td>
+                </tr>
+                <tr>
+                    <td valign="top"><strong>Payment Details</strong></td>
+                    <td>This authority allows the debiting of amounts payable by the Customer under the Agreement between the Customer and <strong>The Australian Veterinary Association Ltd</strong>
+</td>
+                </tr>
+                <tr>
+                    <td valign="top">
+<strong>Details of the Account to be debited</strong> All details must be supplied</td>
+                    <td>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td colspan="2" height="20" valign="top">
+                                        Name of Financial Institution
+                                    </td>
+                                    <td height="20" valign="top">
+                                        Branch Name
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" height="20" valign="top">
+                                        Account Name (please insert your name in full)
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td height="20" valign="top">
+                                        BSB
+                                    </td>
+                                    <td height="20" valign="top">
+                                        Account Number
+                                    </td>
+                                    <td height="20" valign="top">
+                                        ABN/ARBN (if applicable)
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td valign="top"><strong>Customer Authorisation</strong></td>
+                    <td>
+                        <div>By signing the below, I/we acknowledge that this Direct Debit arrangement is governed by the terms of the Authorisation the DDRSA attached to this request</div>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="45" height="36" valign="top">
+                                        Signature
+                                    </td>
+                                    <td width="45" height="36" valign="top">
+                                        Date
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+<pre><code>&lt;br /&gt;
+
+&lt;div class="container"&gt;
+    &lt;h2&gt;Direct Debit Request Service Agreement (DDRSA)&lt;/h2&gt;
+    &lt;table&gt;
+        &lt;tbody&gt;
+            &lt;tr&gt;
+                &lt;td valign="top" width="50%"&gt;
+                    &lt;ol&gt;
+                        &lt;li&gt;By signing the Direct Debit Request, you authorise us to arrange for funds to be debited from your Account in accordance with the Agreement.&lt;/li&gt;
+                        &lt;li&gt;We will advise you 14 days in advance of any changes to the Direct Debit Request.&lt;/li&gt;
+                        &lt;li&gt;
+                            For all matters relating to the Direct Debit Request, including cancellation, alteration or suspension of drawing arrangements or to stop or defer a payment, or to investigate or dispute a previous payment, you should:
+                            &lt;ol class="abc-list"&gt;
+                                &lt;li&gt;Contact AVA Membership 1300 137 309&lt;br /&gt;&lt;strong&gt;And&lt;/strong&gt;&lt;/li&gt;
+                                &lt;li&gt;Allow for 14 days for the amendments to take effect or to respond to a dispute.&lt;/li&gt;
+                            &lt;/ol&gt;
+                            If our investigations show that your Account has been incorrectly debited, we will arrange for the Financial Institution to adjust your Account accordingly. We will also notify you in writing of the amount by which your Account has been adjusted. If, following our investigations, we believe on reasonable grounds that your Account has been correctly debited, we will respond to your query by providing you with reasons and copies of any evidence for this finding.
+                            If we cannot resolve the matter, you can still refer it to your Financial Institution, which will obtain details from you of the disputed payment and may lodge a claim on your behalf.
+                        &lt;/li&gt;
+                        &lt;li&gt;
+                            You should be aware that:
+                            &lt;ol class="abc-list"&gt;
+                                &lt;li&gt;direct debiting through the Bulk Electronic Clearing System (BECS) is not available on all accounts; and&lt;/li&gt;
+                                &lt;li&gt;You should check your Account details (including the Bank State Branch (BSB) number) directly against a recent statement from your Financial Institution.&lt;/li&gt;
+                            &lt;/ol&gt;
+                            If you are in any doubt, please check with your Financial Institution before completing the drawing authority.
+                        &lt;/li&gt;
+                        &lt;li&gt;
+                            It is your responsibility to ensure that:
+                            &lt;ol class="abc-list"&gt;
+                                &lt;li&gt;sufficient cleared funds are in the Account when the payments are to be drawn;&lt;/li&gt;
+                                &lt;li&gt;
+                                    the authorisation to debit the Account is in the same name as the Account signing instruction held by the Financial Institution where the Account is held;
+                                &lt;/li&gt;
+                                &lt;li&gt;
+                                    suitable arrangements are made if the direct debit is cancelled:
+                                    &lt;ul class="unstyled"&gt;
+                                        &lt;li&gt;- by yourself;&lt;/li&gt;
+                                        &lt;li&gt;- by your Financial Institution; or&lt;/li&gt;
+                                        &lt;li&gt;- For any other reason.&lt;/li&gt;
+                                    &lt;/ul&gt;
+                                &lt;/li&gt;
+                            &lt;/ol&gt;
+                        &lt;/li&gt;
+                        &lt;li&gt;
+                            If the due date for payment falls on a day other than a Banking Business Day, the payment will be processed on the next Banking Business Day. If you are uncertain when the payment will be debited from your Account, please check with your Financial Institution.
+                        &lt;/li&gt;
+                    &lt;/ol&gt;
+                &lt;/td&gt;
+                &lt;td valign="top" width="50%"&gt;
+                    &lt;ol&gt;
+                        &lt;li class="invisible"&gt;&lt;/li&gt;
+                        &lt;li class="invisible"&gt;&lt;/li&gt;
+                        &lt;li class="invisible"&gt;&lt;/li&gt;
+                        &lt;li class="invisible"&gt;&lt;/li&gt;
+                        &lt;li class="invisible"&gt;&lt;/li&gt;
+                        &lt;li class="invisible"&gt;&lt;/li&gt;
+                        &lt;li&gt;
+                            For returned unpaid transactions, the following procedures or policies will apply:
+                            &lt;ol class="abc-list"&gt;
+                                &lt;li&gt;we treat the payment as if it was never made;&lt;/li&gt;
+                                &lt;li&gt;services may be suspended until the outstanding charges are paid; and/or&lt;/li&gt;
+                                &lt;li&gt;A fee may be applied for drawings that are returned unpaid. We reserve the right to cancel the Direct Debit Request at any time if drawings are turned unpaid by your Financial Institution.&lt;/li&gt;
+                            &lt;/ol&gt;
+                        &lt;/li&gt;
+                        &lt;li&gt;
+                            All Customer records and Account details will be kept private and confidential to be disclosed only at your request or at the request of the Financial Institution in connection with a claim made to correct/investigate an alleged incorrect or wrongful debit or otherwise as required by law.
+                        &lt;/li&gt;
+                        &lt;li&gt;
+                            If any provision of this DDRSA is found to be illegal, void or unenforceable for unfairness or any other reason (for example, if a court or other tribunal or authority declares it so), the remaining provisions of this DDRSA will continue to apply to the extent possible as if the void or unenforceable provision had never existed.
+                        &lt;/li&gt;
+                    &lt;/ol&gt;
+
+                    &lt;div&gt;
+                        &lt;h4 style="margin:20px 0 10px 0;"&gt;Definitions&lt;/h4&gt;
+                        Unless otherwise defined, a term defined in the Agreement has the same meaning when used in this DDRSA and:&lt;br /&gt;&lt;br /&gt;
+                        Account means the account nominated in the Direct Debit Request, held at your Financial Institution from which we are authorised to arrange for funds to be debited;&lt;br /&gt;&lt;br /&gt;
+                        Agreement means the Terms and Conditions (including BPAY), including the Schedules to those Terms and Conditions, as amended from time to time;&lt;br /&gt;&lt;br /&gt;
+                        Direct Debit Request means the Direct Debit Request between us and you as amended from time to time;&lt;br /&gt;&lt;br /&gt;
+                        Financial Institution is the financial institution where you hold the account nominated in your Direct Debit Request as the account from which we are authorised to arrange for funds to be debited;&lt;br /&gt;&lt;br /&gt;
+                        &lt;strong&gt;We&lt;/strong&gt; means &lt;strong&gt;The Australian Veterinary Association Ltd&lt;/strong&gt; ; and&lt;br /&gt;&lt;br /&gt;
+                        You mean the Customer/s who signed the Direct Debit Request.
+                    &lt;/div&gt;
+                &lt;/td&gt;
+            &lt;/tr&gt;
+        &lt;/tbody&gt;
+    &lt;/table&gt;
+&lt;/div&gt;
+</code></pre>
+
+<p>';
+                //print_r($html1); die();
+                //$html1 = "TEST"; 
+                global $base_url;
+                require_once("sites/all/libraries/dompdf/dompdf_config.inc.php");
+                $dompdf = new DOMPDF;
+                $dompdf-&gt;load_html($html);
+                $dompdf-&gt;render(); 
+                $output = $dompdf-&gt;output();
+                $filename = 'membership_'.$node1-&gt;nid.'.pdf';
+                $file_to_save = 'public://application/'.$filename;
+                file_put_contents($file_to_save, $output);</p>
+
+<pre><code>            $dompdf1 = new DOMPDF;
+            $dompdf1-&gt;load_html($html1);
+            $dompdf1-&gt;render(); 
+            $output1 = $dompdf1-&gt;output();
+            $filename2 = 'membership_debit_'.$node1-&gt;nid.'.pdf';
+            $file_to_save2 = 'public://application/'.$filename2;
+            file_put_contents($file_to_save2, $output1);
+
+            /* $attachment2[] = array(
+              'filecontent' =&gt; file_get_contents($file_to_save),
+              'filename' =&gt; $filename,// You can change the name and extension of the file you need to send.
+              'filemime' =&gt; 'application/pdf',  
+             );
+              */
+
+            /* $attachment2 =  array(
+              'filecontent' =&gt; file_get_contents($file_to_save2),
+              'filename' =&gt; $filename2,// You can change the name and extension of the file you need to send.
+              'filemime' =&gt; 'application/pdf',  
+             ); */
+
+            // print_r($attachment2); die();
+
+             $body_email = "Thank you for your application. &lt;br/&gt;&lt;br/&gt;
+             Your application is now received by the Membership Team.&lt;br/&gt;&lt;br/&gt;
+             You need to submit the form attached to AVA main office to complete your application and payment.&lt;br/&gt;&lt;br/&gt;
+
+             Please click on one of the below to download your authorisation form for monthly payments:&lt;br/&gt;&lt;br/&gt;
+
+             &lt;a href='".$base_url."/sites/default/files/application/".$filename2."'&gt;Download Direct Debit Request (DDR) Authorisation Form&lt;/a&gt;&lt;br/&gt;
+             &lt;a href='".$base_url."/sites/default/files/application/".$filename."'&gt;Download Direct Debit (DDR) Request&lt;/a&gt;&lt;br/&gt;
+
+             Thank you!";
+
+            drupal_mail('ava_ebsco_bulk', 'notice', 'junnel@alphasys.com.au', user_preferred_language(), array('body' =&gt; $body_email, 'subject' =&gt;"AVA Membership Application - Pay By the Month Forms", 'attachment' =&gt; $attachment2), 'donotreply@ava.com.au', TRUE); 
+
+            drupal_mail('ava_ebsco_bulk', 'notice',$result-&gt;data[36]['value'][0], user_preferred_language(), array('body' =&gt; $body_email, 'subject' =&gt;"AVA Membership Application - Pay By the Month Forms", 'attachment' =&gt; $attachment2), 'donotreply@ava.com.au', TRUE); 
+
+
+            $message = '
+            A new membership application has been received using PBTM Option with the following details:&lt;br/&gt;&lt;br/&gt;
+            Member ID: &lt;strong&gt;'.$title.". ".$result-&gt;data[4]['value'][0]." ".$middle_name." ".$result-&gt;data[5]['value'][0].'&lt;br/&gt;&lt;/strong&gt;
+            &lt;a href="'.$base_url.'/sites/default/files/application/'.$filename2.'"&gt;Direct Debit Request (DDR) Authorisation Form&lt;/a&gt;&lt;br/&gt;
+            &lt;a href="'.$base_url.'/sites/default/files/application/'.$filename.'"&gt;Direct Debit (DDR) Request &lt;/a&gt;&lt;br/&gt;
+            ';
+
+            if ((isset($result-&gt;data[42]['value'][0]) &amp;&amp; $result-&gt;data[42]['value'][0] == 'STUDN')){
+                $message .= "Have you ever been subject to disciplinary proceedings for professional misconduct? - &lt;strong&gt;".$result-&gt;data[96]['value'][1]."&lt;/strong&gt;&lt;br/&gt;";
+                $message .= "In the last 5 years has any claim been made against you or are you aware of any facts or circumstances which may give rise to a claim against you in the future? - &lt;strong&gt;".$result-&gt;data[96]['value'][2]."&lt;/strong&gt;&lt;br/&gt;";
+                $message .= "Do you perform any professional services that fall outside the terms of your program of study as a veterinary student? - &lt;strong&gt;".$result-&gt;data[96]['value'][3]."&lt;/strong&gt;&lt;br/&gt;";
+            }else{
+                if((isset($result-&gt;data[22]['value'][0]) &amp;&amp; $result-&gt;data[22]['value'][0]  == 'FULL/Yr')){
+                    $yr_member = intval(date("Y")) - intval($result-&gt;data[41]['value'][0]);
+                    if($yr_member &lt;=1){
+                        // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR1')), true);
+                        $member12 = 'FULL/YR1';
+                    } else if($yr_member ==2){
+                        // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR2')), true);
+                        $member12 = 'FULL/YR2';
+                    } else {
+                        // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR3')), true);
+                        $member12 = 'FULL/YR3';
+                    }
+
+                    if ($member12 == "FULL/YR1" || $member12=="FULL/YR2"){
+                        $message .= "Have you ever been subject to disciplinary proceedings for professional misconduct? - &lt;strong&gt;".$result-&gt;data[96]['value'][1]."&lt;/strong&gt;&lt;br/&gt;";
+                        $message .= "In the last 5 years has any claim been made against you or are you aware of any facts or circumstances which may give rise to a claim against you in the future? - &lt;strong&gt;".$result-&gt;data[96]['value'][2]."&lt;/strong&gt;&lt;br/&gt;";
+                        $message .= "Do you perform any professional services that fall outside the terms of your program of study as a veterinary student? - &lt;strong&gt;".$result-&gt;data[96]['value'][3]."&lt;/strong&gt;&lt;br/&gt;";
+                    }
+                }
+            }
+
+            $message .= "You can review the application here: ".$base_url."/node/".$result-&gt;nid."/submission/".$result-&gt;sid;
+
+            $params = array(
+                'subject' =&gt; 'New AVA Membership Application Received - PBTM',
+                'message' =&gt; $message,
+            );
+            //  drupal_mail('imis_base', 'ava_membership_' . $contact_id, $email, language_default(), $params);
+            drupal_mail('imis_base', 'ava_membership_' . $contact_id, 'junnel@alphasys.com.au', language_default(), $params);
+
+            drupal_mail('imis_base', 'ava_membership_' . $contact_id, 'members@ava.com.au', language_default(), $params);
+
+            drupal_goto('web_signup-thank-you');
+
+        }else{
+
+            if(isset($submission-&gt;data[42]['value'][0]) &amp;&amp; $submission-&gt;data[42]['value'][0] == 'STDOL'){
+
+              $result = webform_get_submission($node1-&gt;webform_id,$node1-&gt;submission_id);
+                /*** Insert Data ***/
+                $member = $result-&gt;data[22]['value'][0];
+
+                //title 
+
+                switch ($result-&gt;data[65]['value'][0]){
+                    case 0:
+                        $title = "Miss";
+                        break;
+                    case 1:
+                        $title = "Mr";
+                        break;
+                    case 2:
+                        $title = "Mrs";
+                        break;
+                    case 3:
+                        $title = "Ms";
+                        break;
+                    case 4:
+                        $title = "Dr";
+                        break;
+                    case 5:
+                        $title = "Professor";
+                        break;
+                    default:
+                        $title = "Dr";
+                        break;
+                }
+
+                $state = explode("/", $result-&gt;data[10]['value'][0]);
+
+                $address = $result-&gt;data[11]['value'][0].", ".$result-&gt;data[9]['value'][0].", ".$state[1].", ".$result-&gt;data[12]['value'][0].", Australia";
+
+                $type = explode("/", $member); //member type
+
+                $chapter = explode("|", $result-&gt;data[63]['value'][0]);
+                $chapter = explode("/", $chapter[0]);
+
+                $middle_name = $result-&gt;data[6]['value'][0] != "" ? strtoupper(substr($result-&gt;data[6]['value'][0], 0)).". " : " ";
+
+                /* $data = array(
+                    'ORG_CODE' =&gt; 'AVA',
+                    'MEMBER_TYPE' =&gt; $type[0],
+                    'CATEGORY' =&gt;  $type[1],
+                    'STATUS' =&gt; 'P',
+                    'LAST_FIRST' =&gt; strtoupper($result-&gt;data[5]['value'][0]).", ".strtoupper($result-&gt;data[4]['value'][0]),
+                    'COMPANY_SORT' =&gt; '',
+                    'FULL_NAME' =&gt; $title.". ".$result-&gt;data[4]['value'][0]." ".$middle_name." ".$result-&gt;data[5]['value'][0],
+                    'COMPANY' =&gt; '',
+                    'FULL_ADDRESS' =&gt; $address,
+                    'PREFIX' =&gt; strtoupper($title),
+                    'FIRST_NAME' =&gt; $result-&gt;data[4]['value'][0],
+                    'MIDDLE_NAME' =&gt; $result-&gt;data[6]['value'][0],
+                    'LAST_NAME' =&gt; $result-&gt;data[5]['value'][0],
+                    'INFORMAL' =&gt; $result-&gt;data[4]['value'][0],
+                    'WORK_PHONE' =&gt; $result-&gt;data[13]['value'][0],
+                    'HOME_PHONE' =&gt; '',
+                    'FAX' =&gt; '',
+                    'TOLL_FREE' =&gt; $result-&gt;data[14]['value'][0],
+                    'CITY' =&gt; strtoupper($result-&gt;data[9]['value'][0]),
+                    'STATE_PROVINCE' =&gt; strtoupper($state[1]),
+                    'ZIP' =&gt; $result-&gt;data[12]['value'][0],
+                    'MAIL_ADDRESS' =&gt; $address,
+                    'BILL_ADDRESS' =&gt; $address,
+                    'GENDER' =&gt; $result-&gt;data[8]['value'][0],
+                    'BIRTH_DATE' =&gt;  $result-&gt;data[7]['value'][0]." 00:00:00",
+                    'CHAPTER' =&gt; $chapter[0],
+                    'MEMBER_RECORD' =&gt; 'TRUE',
+                    'COMPANY_RECORD' =&gt; 'FALSE',
+                    'JOIN_DATE' =&gt; date('Y-m-d h:i:s'),
+                    'PAID_THRU' =&gt; '2015-06-30 00:00:00',
+                    'MEMBER_STATUS' =&gt; 'P',
+                    'MEMBER_STATUS_DATE' =&gt; '',
+                    'PREVIOUS_MT' =&gt; 'P',
+                    'MT_CHANGE_DATE' =&gt; date('Y-m-d h:i:s'),
+                    'DATE_ADDED' =&gt; date('Y-m-d h:i:s'),
+                    'LAST_UPDATED' =&gt; date('Y-m-d h:i:s'),
+                    'ADDRESS_NUM_1' =&gt; '', //save first address in Name Address tble before proceeding.
+                    'ADDRESS_NUM_2' =&gt; '', //save first address in Name Address tble before proceeding.
+                    'ADDRESS_NUM_3' =&gt; '', //save first address in Name Address tble before proceeding.
+                    'SHIP_ADDRESS_NUM' =&gt; '', //save first address in Name Address tble before proceeding.
+                    'EMAIL' =&gt; 'junnel@alphasys.com.au6',
+                    'SIG' =&gt; $result-&gt;data[51]['value'], 
+                    'STREET' =&gt; $result-&gt;data[11]['value'],
+                    'COUNTRY' =&gt; 'Australia',
+                );
+
+
+                $pricing_list = json_decode(ava_websignup_api_call('POST', 'http://10.0.10.202/jack_api/api/save_member_data', array('data'=&gt;json_encode($data))), true);
+
+                print_r($result); die();     */         
+
+                $submitted['Name']['Prefix'] = $title;
+                $submitted['Name']['FirstName'] = $result-&gt;data[4]['value'][0];
+                $submitted['Name']['Informal'] = $result-&gt;data[4]['value'][0];
+                $submitted['Name']['MiddleName'] = $result-&gt;data[6]['value'][0];
+                $submitted['Name']['LastName'] = $result-&gt;data[5]['value'][0];
+                $submitted['Name']['BirthDate'] = $result-&gt;data[7]['value'][0]." 00:00:00";
+                $submitted['Name_Demographics'][0]['DATE_OF_BIRTH'] = $result-&gt;data[7]['value'][0]." 00:00:00";
+                 //$submitted['Name']['Gender'] = substr($submission-&gt;data[6]['value'][0], 0, 1);
+                $submitted['Name_Demographics'][0]['GENDER'] =  $result-&gt;data[8]['value'][0];
+                $submitted['Name']['HomePhone'] =$result-&gt;data[13]['value'][0];
+                $submitted['Name']['WorkPhone'] = $result-&gt;data[13]['value'][0];
+                $submitted['Name']['Fax'] = '';
+                $submitted['Name']['Mobile'] =$result-&gt;data[14]['value'][0];
+                $submitted['Name']['CustomerTypeCode'] = "STDOL"; //usbon ni siya
+                $submitted['Name']['BillingCategory'] = "STDOL";
+                $submitted['Address']['Postal']['Email'] = $result-&gt;data[36]['value'][0];
+                $submitted['Address']['Postal']['Address1'] = $result-&gt;data[11]['value'];
+                $submitted['Address']['Postal']['City'] =  strtoupper($result-&gt;data[9]['value'][0]);
+                $submitted['Address']['Postal']['State'] = strtoupper($state[1]);
+                $submitted['Address']['Postal']['PostalCode'] = $result-&gt;data[12]['value'][0];
+                $submitted['Address']['Postal']['Country'] = 'Australia';
+                $submitted['Address']['Postal']['IsPreferredMail'] = TRUE;
+                $submitted['Address']['Postal']['IsPreferredBill'] = TRUE;
+                $submitted['Address']['Postal']['IsPreferredShip'] = TRUE;
+                  /*
+                   Not needed as per spec
+                   $submitted['Address']['Home']['Address1'] = $submission-&gt;data[11]['value'][0];
+                   $submitted['Address']['Home']['City'] = $submission-&gt;data[12]['value'][0];
+                   $submitted['Address']['Home']['State'] = $submission-&gt;data[66]['value'][0];
+                   $submitted['Address']['Home']['PostalCode'] = $submission-&gt;data[67]['value'][0];
+                   */
+
+
+                $email = $result-&gt;data[36]['value'][0];
+                $activity = array();
+                $activity['PRODUCT_CODE'] = $result-&gt;data[66]['value'][0]; //Degree
+                $faculty = explode("|",$result-&gt;data[17]['value'][0]);
+                $activity['UF_1'] = $faculty[0]; //Faculty
+                $activity['UF_2'] = 'AUS'; //Country
+                $activity['DESCRIPTION'] =$result-&gt;data[67]['value'][0]; //Year
+
+                $contact_id = imis_contact_insert_contact();
+                $username = strtoupper($submitted['Name']['LastName']) . $contact_id;
+                $password = 'member1001';
+                imis_user_promote_contact_to_web_user($contact_id, $username, $password); //gives username and password
+
+                imis_contact_sync_single($contact_id, FALSE);
+                $c = imis_contact_load($contact_id);
+                $account-&gt;name = $username;
+                $account-&gt;imis['ContactId'] = $contact_id;
+                imis_contact_inflate($account);
+
+                $modified_account = imis_base_clone($account);
+                $modified_account-&gt;imis = $submitted;
+                imis_contact_submit_to_imis($account, $modified_account, array('Name-Membership' =&gt; 'Name-Membership', 'Name' =&gt; 'Name'));
+                imis_activities_save($contact_id, 'DEGREE', $activity);
+
+                $res1 = 0;
+                $res2 = 0;
+                $res3 = 0;
+                $res4 = 0;
+                $res5 = 0;
+                $res6 = "";
+                if($result-&gt;data[39]['value'][0] == '0'){
+                    $res1 = 1;
+                } else if($result-&gt;data[39]['value'][0] == '1'){
+                    $res2 = 1;
+                } else if($result-&gt;data[39]['value'][0] == '2'){
+                    $res3 = 1;
+                } else if($result-&gt;data[39]['value'][0] == '3'){
+                    $res4 = 1;
+                } else if($result-&gt;data[39]['value'][0] == '4'){
+                    $res5 = 1;
+                } else {
+                    $res6 = $result-&gt;data[53]['value'][0];
+                }
+                $date_chop2 =explode("-",$result-&gt;data[7]['value'][0]);
+                $data = array(
+                    'STATUS' =&gt; 'A',
+                    'ID' =&gt; $contact_id,
+                    'JOIN_REASON_1' =&gt; $res1,
+                    'JOIN_REASON_2' =&gt; $res2,
+                    'JOIN_REASON_3' =&gt; $res3,
+                    'JOIN_REASON_4' =&gt; $res4,
+                    'JOIN_REASON_5' =&gt; $res5,
+                    'JOIN_REASON_6' =&gt; $res6,
+                    'EMAIL' =&gt; $result-&gt;data[36]['value'][0],
+                    'LAST_UPDATED' =&gt; date('Y-m-d h:i:s'),
+                    'ADDRESS_1' =&gt; $result-&gt;data[11]['value'][0],
+                    'CHAPTER' =&gt; $faculty[1],
+                    'GENDER' =&gt; $result-&gt;data[8]['value'][0] == "F" ? "female": "male",
+                    'birthDate' =&gt; array(
+                                        'year' =&gt;$date_chop2[0],
+                                        'month' =&gt;$date_chop2[1],
+                                        'day' =&gt;$date_chop2[2],
+                                        ),
+                );
+
+                $result1 =  json_decode(ava_websignup_api_call('POST', 'api/change_member_status_stdol', array('data'=&gt;json_encode($data))), true);
+
+                $key = imis_base_get_admin_key();
+                $changed['Name']['BirthDate'] = $result-&gt;data[7]['value'][0]." 00:00:00";
+                $changed['Name']['Gender'] = $result-&gt;data[8]['value'][0] == "F" ? "Female": "Male"; 
+                imis_contact_update_contact($key, $contact_id, $changed['Name']);
+
+                $stdol_now = intval(date("n"));
+                // $stdol_now = 2;
+                if(($stdol_now &gt;= 4 &amp;&amp; $stdol_now &lt;= 9) || ($stdol_now &gt;= 10 &amp;&amp; $stdol_now &lt;= 12)){
+                    $expire_year = intval(date('Y') + 1);
+                } else {
+                    $expire_year = date('Y');
+                }
+
+                $data_billing = array(
+                    'TYPE' =&gt; 'STDOL',
+                    'ID' =&gt; $contact_id,
+                    'CHAPT' =&gt; "CHAPT/".$faculty[1],
+                    // 'date_applied' =&gt; date('Y-m-d h:i:s'),
+                    'date_applied' =&gt; date('Y-m-d h:i:s'),
+                    // 'date_paid_thru' =&gt; date('2015-07-01 00:00:00'), 
+                    'date_paid_thru' =&gt; ((string)$expire_year)."-06-30 00:00:00",   
+                    // 'bill_begin' =&gt; date('Y-m-d h:i:s'), // january 1
+                    'bill_begin' =&gt; ((string)$expire_year)."-07-01 00:00:00",
+                );
+
+                $result2 =  json_decode(ava_websignup_api_call('POST', 'api/create_billing', array('data'=&gt;json_encode($data_billing))), true);
+
+
+                $message = 'Thank you for joining up with the AVA. We welcome you as a online student member.
+                You can now log in to the AVA website with the following details:
+                Username: ' . $username . '
+                Password: member1001
+
+                For any enquiries, please contact the AVA membership staff on 1300137 3009.';
+
+                  $params = array(
+                    'subject' =&gt; 'AVA membership',
+                    'message' =&gt; $message,
+                  );
+                //  drupal_mail('imis_base', 'ava_membership_' . $contact_id, $email, language_default(), $params);
+                  drupal_mail('imis_base', 'ava_membership_' . $contact_id, 'junnel@alphasys.com.au', language_default(), $params);
+                  drupal_mail('imis_base', 'ava_membership_' . $contact_id, $result-&gt;data[36]['value'][0], language_default(), $params);
+                 global $base_url;
+                 $body_email2 = "
+                 A membership application for Student Free Online has been received with the ff details. &lt;br/&gt;&lt;br/&gt;
+                 Member ID: ".$contact_id."&lt;br/&gt;             
+                 Username: ".$username."&lt;br/&gt;            
+                 Email Address: ". $result-&gt;data[36]['value'][0]."&lt;br/&gt;&lt;br/&gt;
+                 You can view the complete user's application here:".$base_url."/node/".$result-&gt;nid."/submission/".$result-&gt;sid;
+
+
+                drupal_mail('ava_ebsco_bulk', 'notice', $result-&gt;data[36]['value'][0], user_preferred_language(), array('body' =&gt; $body_email2, 'subject' =&gt;"AVA Membership Application Received"), 'donotreply@ava.com.au', TRUE); 
+
+                drupal_goto('web_signup-thank-you-stdol');
+            } else {
+
+                $all_payment = $submission-&gt;data[85]['value'];
+
+                $total = 0;
+
+                $sig_array = array();
+
+                foreach($submission-&gt;data[51]['value'] as $sig){
+                    $sig_array[$sig] = $all_payment[$sig];
+                }
+
+                $total_a1 = $all_payment[$submission-&gt;data[64]['value'][0]]; //this is for national subscription
+                $total_chapt = $all_payment[$submission-&gt;data[63]['value'][0]]; //this is for chapter subscription
+
+                $message = t('To complete your membership transaction please continue through the checkout process');
+                $data = array(
+                    'module' =&gt; 'ava_websignup',
+                    'shippable' =&gt; FALSE,
+                    'webform_id' =&gt; $node1-&gt;webform_id,
+                    'system' =&gt; 'membership',
+                    'submission_id' =&gt; $node1-&gt;submission_id,
+                    'pricing' =&gt; $all_payment,
+                    'title' =&gt; $submission-&gt;data[86]['value'],
+                    'A1_NATIONAL' =&gt; array($submission-&gt;data[64]['value'][0] =&gt; $total_a1),
+                    'CHAPT' =&gt; array($submission-&gt;data[63]['value'][0] =&gt; $total_chapt),
+                    'SIG' =&gt; $sig_array,
+                    'description' =&gt; ava_websignup_application_calculate_description($submission, $node),
+                    'price' =&gt; ava_websignup_application_calculate_price($submission, $node),
+                );
+
+                uc_cart_add_item($node1-&gt;nid, 1, $data, NULL, $message);
+                drupal_goto('cart');
+            }
+
+
+
+
+    //  print_r($submission); die();
+        //  exit();
+        //print_r($node); die();
+
+        //  print_r($submission); die();
+        }
+        // print_r($submission);die();
+        /*
+        $node = new stdClass();
+        // $node-&gt;title = $submission-&gt;data[9]['value'][0];
+        $node-&gt;type = 'ava_membership';
+        node_object_prepare($node);
+        $node-&gt;language = LANGUAGE_NONE; 
+        $node-&gt;status = 1;
+
+        $node-&gt;field_first_name[$node-&gt;language][0]['value'] = $submission-&gt;data[4]['value'][0];
+        $node-&gt;field_last_name[$node-&gt;language][0]['value'] = $submission-&gt;data[5]['value'][0];
+        $node-&gt;field_middle_name[$node-&gt;language][0]['value'] = $submission-&gt;data[6]['value'][0];
+        $node-&gt;field_date_of_birth[$node-&gt;language][0]['value'] = $submission-&gt;data[7]['value'][0];
+        $node-&gt;field_gender[$node-&gt;language][0]['value'] = $submission-&gt;data[8]['value'][0];
+        $node-&gt;field_postal_street_address[$node-&gt;language][0]['value'] = $submission-&gt;data[11]['value'][0];
+        $node-&gt;field_avawebsignup_city[$node-&gt;language][0]['value'] = $submission-&gt;data[9]['value'][0];
+        $node-&gt;field_postal_state[$node-&gt;language][0]['value'] = $submission-&gt;data[10]['value'][0];
+        $node-&gt;field_postal_postcode[$node-&gt;language][0]['value'] = $submission-&gt;data[12]['value'][0];
+        $node-&gt;field_telephone_no[$node-&gt;language][0]['value'] = $submission-&gt;data[13]['value'][0];
+        $node-&gt;field_mobile_no[$node-&gt;language][0]['value'] = $submission-&gt;data[14]['value'][0];
+        $node-&gt;field_avawebsignup_email_address[$node-&gt;language][0]['value'] = $submission-&gt;data[36]['value'][0];
+        $node-&gt;field_decision_factor[$node-&gt;language][0]['value'] = $submission-&gt;data[38]['value'][0];
+        $node-&gt;field_educational_information[$node-&gt;language][0]['value'] = $submission-&gt;data[17]['value'][0];
+        $node-&gt;field_year_attended[$node-&gt;language][0]['value'] = $submission-&gt;data[18]['value'][0];
+        $node-&gt;field_educational_status[$node-&gt;language][0]['value'] = $submission-&gt;data[42]['value'][0];
+         */
+
+    }
+}
+
+function ava_websignup_check_validate($form, &amp;$form_state) {
+    // die();
+    /* if($form_state['values']['details']['page_num'] == 2) {
+        echo "2";
+        if($form_state['values']['submitted'][22] == 'FULL/SPOUS') {
+            echo "spous";
+        //  echo "&lt;script&gt;console.log('wew2');&lt;/script&gt;";
+            if($form_state['values']['submitted'][70] == ""){
+                echo "70";
+                die();
+                form_set_error('submitted[my_spouse_is]',"Please input your spouse name.");
+                // print_r($form_state);
+            }
+        }
+    } */
+    /* if($form_state['values']['op'] == t('Step 3')){
+        if($form_state['values']['submitted'][70] == ''){ 
+            form_set_error('submitted[spouse_given_name]',"Please input your spouse given name.");
+            // print_r($form_state);
+        }
+    } */
+
+}
+
+function ava_websignup_uc_product_alter(&amp;$node){
+    if ($node-&gt;data['module'] != 'ava_websignup') {
+        return;
+    }       
+    $node-&gt;qty = 1;
+    $node-&gt;price = $node-&gt;data['price'];
+}
+
+
+function ava_websignup_uc_cart_item_presave($entity){
+    if ($entity-&gt;data['module'] != 'ava_websignup') {
+        return;
+    }
+    $entity-&gt;qty = 1;
+    $entity-&gt;price = $entity-&gt;data['price'];
+
+}
+/**
+ * Implements hook_cart_display().
+ * @param $item
+ *   An item in the shopping cart.
+ * @param object $node
+ *     Optional(this is not in the core hook).  Pass in a prepared node.
+ *     This is used when asking for a quote - prioir to node_save being called
+ *
+ * @return
+ *   A form element array to be processed by uc_cart_view_form().
+ */
+function ava_websignup_uc_cart_display($item) {
+  global $user;
+  $node = node_load($item-&gt;nid);
+ // print_r($node)
+  $description = $item-&gt;data['description'];
+
+  if (user_access('view all orders') || $user-&gt;uid == $item-&gt;cart_id) {
+    $visible = TRUE;
+  }
+  else {
+    $visible = FALSE;
+  }
+
+  $element = array();
+  $element['nid'] = array(
+    '#type' =&gt; 'value',
+    '#value' =&gt; $node-&gt;nid,
+  );
+  $element['module'] = array(
+    '#type' =&gt; 'value',
+    '#value' =&gt; 'ava_websignup',
+  );
+  $element['remove'] = array('#type' =&gt; 'checkbox');
+  $element['options'] = '';
+  $element['title'] = (!$visible) ? array('#markup' =&gt; check_plain($node-&gt;title)) : array('#markup' =&gt; l($node-&gt;title, 'node/' . $node-&gt;nid));
+  $element['description'] = array(
+    '#markup' =&gt; '&lt;p&gt;' . $description . '&lt;/p&gt;',
+    //'#value' =&gt; 
+  );
+  $element['#total'] = $item-&gt;price;
+  $element['data'] = array(
+    '#type' =&gt; 'hidden',
+    '#value' =&gt; serialize($item-&gt;data),
+  );
+  $element['qty'] = array(
+    '#type' =&gt; 'textfield',
+    '#default_value' =&gt; $item-&gt;qty,
+    '#size' =&gt; 5,
+    '#maxlength' =&gt; 6,
+  );
+
+
+  return $element;
+}
+
+/**
+ * Implements hook_update_cart_item().
+ *
+ * Handles individual products or entire kits.
+ */
+function ava_websignup_uc_update_cart_item($nid, $data = array(), $qty, $cid = NULL) {
+  if (!$nid) {
+    return NULL;
+  }
+  $cid = !(is_null($cid) || empty($cid)) ? $cid : uc_cart_get_id();
+  if ($qty &lt; 1) {
+    uc_cart_remove_item($nid, $cid, $data);
+  }
+  elseif ($qty &gt; 1) {
+    drupal_set_message(t('You may only have one purchase one membership application.'));
+    uc_product_update_cart_item($nid, $data, 1, $cid);
+  }
+}
+
+function ava_websignup_form_alter( &amp;$form, &amp;$form_state,$form_id ){
+    if($form_id == 'webform_client_form_61802'){
+        uc_cart_empty(uc_cart_get_id());
+        $university_list = array();
+        $university_list2 = array();
+        $responseData_stud = json_decode(ava_websignup_api_call('POST', 'api/get_university', array('type' =&gt; 'stud')), true);
+        $responseData_vet = json_decode(ava_websignup_api_call('POST', 'api/get_university', array('type' =&gt; 'full')), true);
+        // print_r($responseData_stud);die();
+        $form['#validate'][] = 'ava_websignup_check_validate';
+        $form['#attached']['js'][] = drupal_get_path('module', 'ava_websignup') . '/ava_websignup.js';
+
+                // print_r($form_state);
+        if ($form_state['values']['details']['page_num'] == "2"){
+            /* if($form_state['values']['submitted'][22] == 'FULL/SPOUS'){
+                if($form_state['values']['submitted'][70] == ""){
+                    form_set_error('submitted[my_spouse_is]',"Please input your spouse name.");
+                }
+            } */
+
+            if($form_state['values']['submitted'][42] == "STDOL" &amp;&amp; $form_state['values']['op'] == t('Step 3')){
+
+                global $user;
+                $node = node_load(61802); //nid is the node id of your webform
+
+
+                //the values to save
+                $data = array(
+                65 =&gt; array('value' =&gt; array($form_state['values']['submitted'][65])),
+                4 =&gt; array('value' =&gt; array($form_state['values']['submitted'][4])),
+                5 =&gt; array('value' =&gt; array($form_state['values']['submitted'][5])),
+                6 =&gt; array('value' =&gt; array($form_state['values']['submitted'][6])),
+                7 =&gt; array('value' =&gt; array($form_state['values']['submitted'][7])),
+                8 =&gt; array('value' =&gt; array($form_state['values']['submitted'][8])),
+                11 =&gt; array('value' =&gt; array($form_state['values']['submitted'][11])),
+                9 =&gt; array('value' =&gt; array($form_state['values']['submitted'][9])),
+                10 =&gt; array('value' =&gt; array($form_state['values']['submitted'][10])),
+                12 =&gt; array('value' =&gt; array($form_state['values']['submitted'][12])),
+                13 =&gt; array('value' =&gt; array($form_state['values']['submitted'][13])),
+                14 =&gt; array('value' =&gt; array($form_state['values']['submitted'][14])),
+                36 =&gt; array('value' =&gt; array($form_state['values']['submitted'][36])),
+                39 =&gt; array('value' =&gt; array($form_state['values']['submitted'][39])),
+                53 =&gt; array('value' =&gt; array($form_state['values']['submitted'][53])),
+                38 =&gt; array('value' =&gt; array($form_state['values']['submitted'][38])),
+                17 =&gt; array('value' =&gt; array($form_state['values']['submitted'][17])),
+                66 =&gt; array('value' =&gt; array($form_state['values']['submitted'][66])),
+                67 =&gt; array('value' =&gt; array($form_state['values']['submitted'][67])),
+                41 =&gt; array('value' =&gt; array($form_state['values']['submitted'][41])),
+                68 =&gt; array('value' =&gt; array($form_state['values']['submitted'][68])),
+                69 =&gt; array('value' =&gt; array($form_state['values']['submitted'][69])),                  
+                42 =&gt; array('value' =&gt; array($form_state['values']['submitted'][42])),
+                );
+
+                $submission = (object) array(
+                'nid' =&gt; 61802,
+                'uid' =&gt; $user-&gt;uid,
+                'submitted' =&gt; REQUEST_TIME,
+                'remote_addr' =&gt; ip_address(),
+                'is_draft' =&gt; FALSE,
+                'data' =&gt; $data,
+              );
+
+
+              module_load_include('inc', 'webform', 'includes/webform.submissions');
+              webform_submission_insert($node, $submission);
+              webform_submission_send_mail($node, $submission);
+
+            }
+        }
+        //unset($form['#validate']);
+        //$form['#validate'][0] = 'ava_websignup_validate_function';
+        // print_r($form_state);
+        foreach($responseData_stud as $key=&gt;$value){
+            $university_list[$value['code']."|".$value['division']] = $value['description'];
+        }
+        foreach($responseData_vet as $key=&gt;$value){
+            $university_list2[$value['code']."|".$value['division']] = $value['description'];
+        }
+
+        $form['submitted']['stud_educational_information']['#options'] = $university_list;  
+        $form['submitted']['vet_educational_information']['#options'] = $university_list2;  
+
+        $chapter_list = array();
+        $chapter_payment = array();
+        $sig_list = array();
+        $sig_payment = array();
+        $dues_list = array();
+        $dues_payment = array();
+        $disabled_chapter = array();
+        $all_payment = array();
+        $stud_choosen = 0;
+
+        if($form_state['storage']['submitted'][38] == 1){
+            if($form_state['storage']['submitted'][22] == 'FULL/Yr'){
+                $yr_send = intval(date("Y")) - intval($form_state['storage']['submitted'][41]);
+                if($yr_send &lt;=1){
+                    $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR1')), true);
+                    // $final_type = 'FULL/YR1';
+                } else if($yr_send ==2){
+                    $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR2')), true);
+                    // $final_type = 'FULL/YR2';
+                } else {
+                    $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR3')), true);
+                    // $final_type = 'FULL/YR3';
+                }
+            } else {
+                $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; $form_state['storage']['submitted'][22])), true);
+            } 
+        } else if($form_state['storage']['submitted'][38] == 0 &amp;&amp; $form_state['storage']['submitted'][17] != "" &amp;&amp; $form_state['storage']['submitted'][42] == "STUDN"){
+            $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'STUDN')), true);
+            $stud_choosen = 1;
+        }
+
+        if(isset($pricing_list) &amp;&amp; !empty($pricing_list)){
+            foreach($pricing_list as $key=&gt;$value){
+
+                $now = intval(date("n")); // this will be used during final implementation.
+                // $now = 2; // $now is the month of application. This is defaulted to 1(january) for testing purpose only.
+                if($form_state['storage']['submitted'][42] == "STUDN") {
+                    $deducted_price = $value['BASE_1'];
+                } else {
+                    if($now &lt;= 3){
+                        $deducted_price = ($value['BASE_1']-($value['BASE_1']*.50));
+                    } else if($now &gt;= 4 &amp;&amp; $now &lt;= 9){
+                        $deducted_price = $value['BASE_1'];
+                    } else {
+                        $deducted_price = ($value['BASE_1']-($value['BASE_1']*.25));
+                    }
+                }
+                if($value['PROD_TYPE'] == "CHAPT"){
+                    $chapter_list[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                    $all_payment[$value['PRODUCT_CODE']] = $deducted_price;
+
+                    $all_title[$value['PRODUCT_CODE']] = $value['TITLE'];
+
+                    if($stud_choosen == 0){
+                        if($form_state['storage']['submitted'][10] == $value['PRODUCT_CODE']){
+                            $chapter_default = $value['PRODUCT_CODE'];
+                        } else {
+                            array_push($disabled_chapter,$value['PRODUCT_CODE']);
+                        }
+                    } else {
+                        $the_chap = explode("|",$form_state['storage']['submitted'][17]);
+                        if(substr($value['PRODUCT_CODE'],6) == $the_chap[1]){
+                            $chapter_default = $value['PRODUCT_CODE'];
+                        } else {
+                            array_push($disabled_chapter,$value['PRODUCT_CODE']);
+                        }
+                    }
+
+                } else if($value['PROD_TYPE'] == "SEC"){
+                    //  $sig_list[$value['PRODUCT_CODE']."_".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    //  $all_payment[$value['PRODUCT_CODE']."_".$value['BASE_1']] = $deducted_price;
+
+                    $sig_list[$value['PRODUCT_CODE']] = $value['TITLE']." $". $deducted_price;
+                    $all_title[$value['PRODUCT_CODE']] = $value['TITLE'];
+                    $all_payment[$value['PRODUCT_CODE']] = $deducted_price;
+
+
+
+                    $form['submitted']['sig_options']['#options'] = $sig_list;
+                    $form['submitted']['sig_options']['#theme'] = array('ava_websignup_multicolumn_options');  
+                    $form['submitted']['sig_options']['#columns'] = 2;   
+                    //$form['submitted']['sig_options']['#value'] = $sig_list['SG_AAHVJA|90.00'];
+
+                } else {
+                    $dues_list[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE']." $". $deducted_price;
+                    $all_payment[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $deducted_price;
+                    $dues_default = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+                    $all_title[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];
+                }
+            }
+
+            $all_payment_array = $all_payment;
+            $all_payment = json_encode($all_payment);
+
+            $form['submitted']['chapter']['#options'] = $chapter_list;  
+            $form['submitted']['chapter']['#theme'] = array('ava_websignup_multicolumn_options');  
+            $form['submitted']['chapter']['#columns'] = 2;
+            $form['submitted']['chapter']['#default_value'] = $chapter_default;  
+            foreach($disabled_chapter as $key =&gt; $value){
+                $form['submitted']['chapter'][$value] = array('#disabled' =&gt; TRUE,);
+            }
+
+            $form['submitted']['national_subscription']['#options'] = $dues_list;  
+            $form['submitted']['national_subscription']['#default_value'] = $dues_default; 
+
+
+            $form['submitted']['all_payment']['#value'] = $all_payment_array;
+            $form['submitted']['all_title']['#value'] = $all_title;
+
+            $form['submitted']['allprice']['#markup'] = "&lt;script&gt;var all_payment=" . $all_payment . ";&lt;/script&gt;";
+        }
+    //  print_r($form);
+        /* if($form_state['storage']['submitted'][38] == 1){
+        // echo "wew";
+            // print_r($form_state);die();
+            $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; $form_state['storage']['submitted'][22])), true);
+            // print_r($pricing_list);
+            $chapter_list = array();
+            $chapter_payment = array();
+            $sig_list = array();
+            $dues_list = array();
+            $disabled_chapter = array();
+            foreach($pricing_list as $key=&gt;$value){
+                if($value['PROD_TYPE'] == "CHAPT"){
+                    $chapter_list[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];
+                    $chapter_payment[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['BASE_1'];
+                    if($form_state['storage']['submitted'][10] == $value['PRODUCT_CODE']){
+                        $chapter_default = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+                        // echo $chapter_default;die();
+                    } else {
+                        array_push($disabled_chapter,$value['PRODUCT_CODE']."|".$value['BASE_1']);
+                    }
+                } else if($value['PROD_TYPE'] == "SEC"){
+                    $sig_list[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];
+                    // $form['submitted']['chapter'][$value['PRODUCT_CODE']."|".$value['BASE_1']] = array('#disabled' =&gt; TRUE,);
+                } else {
+                    $dues_list[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];
+                    $dues_default = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+                }
+            }
+                $wew = json_encode($chapter_list);
+                echo "&lt;script&gt;var math=" . $wew . ";&lt;/script&gt;";
+            // print_r($disabled_chapter);
+             $form['submitted']['sig_options']['#options'] = $sig_list;  
+
+            $form['submitted']['chapter']['#options'] = $chapter_list;  
+            $form['submitted']['chapter']['#default_value'] = $chapter_default;  
+            foreach($disabled_chapter as $key =&gt; $value){
+                $form['submitted']['chapter'][$value] = array('#disabled' =&gt; TRUE,);
+            }
+
+            $form['submitted']['national_subscription']['#options'] = $dues_list;  
+            $form['submitted']['national_subscription']['#default_value'] = $dues_default; 
+
+        } else if($form_state['storage']['submitted'][38] == 0 &amp;&amp; $form_state['storage']['submitted'][17] != "" &amp;&amp; $form_state['storage']['submitted'][47] == "STUDN"){
+            echo "wow";
+            print_r($form_state);
+            $the_chap = explode("|",$form_state['storage']['submitted'][17]);
+            // echo $the_chap. "----";
+            $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'STUDN')), true);
+            // print_r($pricing_list);die();
+            $chapter_list = array();
+            $chapter_payment = array();
+            $sig_list = array();
+            $sig_payment = array();
+            $dues_list = array();
+            $dues_payment = array();
+            $disabled_chapter = array();
+            foreach($pricing_list as $key=&gt;$value){
+                if($value['PROD_TYPE'] == "CHAPT"){
+                    $chapter_list[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];
+                    $chapter_payment[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['BASE_1'];
+                    if(substr($value['PRODUCT_CODE'],6) == $the_chap[1]){
+                        $chapter_default = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+                    } else {
+                        array_push($disabled_chapter,$value['PRODUCT_CODE']."|".$value['BASE_1']);
+                    } 
+
+                } else if($value['PROD_TYPE'] == "SEC"){
+                    $sig_list[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];
+                    $sig_payment[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['BASE_1'];
+                } else {
+                    $dues_list[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['TITLE'];
+                    $dues_payment[$value['PRODUCT_CODE']."|".$value['BASE_1']] = $value['BASE_1'];
+                    $dues_default = $value['PRODUCT_CODE']."|".$value['BASE_1'];
+                }
+            }
+
+            $form['submitted']['sig_options']['#options'] = $sig_list;  
+
+            $form['submitted']['chapter']['#options'] = $chapter_list;  
+            $form['submitted']['chapter']['#default_value'] = $chapter_default;  
+            foreach($disabled_chapter as $key =&gt; $value){
+                $form['submitted']['chapter'][$value] = array('#disabled' =&gt; TRUE,);
+            }
+
+            $form['submitted']['national_subscription']['#options'] = $dues_list;  
+            $form['submitted']['national_subscription']['#default_value'] = $dues_default;   
+        } */
+    }
+}
+</code></pre>
+
+<p>/*  function ava_websignup_select_title($form, $form_state){
+        echo $form_state; die();
+        // $form['submitted']['ava_websignup_email_address']['#default_value'] = "<a href="mailto:wew@wew.com">wew@wew.com</a>";
+        // return $form['ava_websignup_email_address'];
+        // print_r($form);die();
+        // $form['submitted']['chapter']['#options'] = array("wew" =&gt; "Wew"); 
+        // $form['chapter']['und']['#options'] = array("wew" =&gt; "Wew"); 
+        // return $form['chapter'];
+        // return $form['submitted']['national_subscription']['#options'];
+        $element = $form['submitted']['chapter'];
+        $element['#options'] = array("wew"=&gt;"wew");
+        return $element;</p>
+
+<pre><code>} */
+
+/**
+ * Theme function to format elements into multiple columns
+ */
+function theme_ava_websignup_multicolumn_options($element) {
+    // print_r($element);die();
+  $stripped_element = array_values($element);
+  $element = $stripped_element[0];
+
+  // Initialize variables.
+  $output = '';
+  $total_columns = (isset($element['#columns'])) ? $element['#columns'] : 2;
+  $total_options = count($element['#options']);
+  $options_per_column = ceil($total_options / $total_columns);
+  $keys = array_keys($element['#options']);
+  $type = $element[$keys[0]]['#type'];
+
+  // Start wrapper div.
+  $output .= '&lt;div class="multicolumn-options-wrapper clearfix"&gt;';
+  $current_column = 1;
+  $current_option = 0;
+
+  while ($current_column &lt;= $total_columns) {
+    // Start column div.
+    $output .=  '&lt;div class="multicolumn-options-column" style="float:left;"&gt;';
+
+    // Keep looping through until the maximum options per column are reached,
+    // or you run out of options.
+    while ($current_option &lt; $options_per_column * $current_column 
+              &amp;&amp; $current_option &lt; $total_options) {
+      // Output as either check or radio button depending on the element type.
+      $output .= drupal_render($element[$keys[$current_option]]);
+      $current_option++;
+    }
+
+    // End column div.
+    $output .= '&lt;/div&gt;';
+    $current_column++;
+  }
+
+  // End wrapper div.
+  $output .= '&lt;/div&gt;';
+
+  return $output;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ava_websignup_theme($existing, $type, $theme, $path) {
+  return array(
+    'ava_websignup_multicolumn_options' =&gt; array(
+      'render element' =&gt; 'form',
+    ),
+  );
+}
+
+
+/*
+* This is the validate for review 
+*/ 
+</code></pre>
+
+<p>/*<br>
+function web_signup_review_form_validate($form, &amp;$form_state) {
+    $current_step = $form_state['storage']['step'];
+    $form_state['storage'][$current_step] = $form_state['values'];</p>
+
+<pre><code>if ($form_state['values']['op'] == t('&lt;&lt; Back')) { //back button
+    $form_state['storage']['step'] = 1;
+    $form_state['rebuild'] = TRUE;
+    //don't validate required fields for the back button
+}
+else if ($form_state['values']['op'] == t('Next &gt;&gt;')) { //next button
+    $form_state['storage']['step'] = 2;
+    $form_state['rebuild'] = TRUE;
+    // veted_calendar_listing_validate_fields($current_step, $form, $form_state); //validate required fields etc
+
+}
+else if ($form_state['values']['op'] == t('Submit')) { //finish button
+    $form_state['rebuild'] = FALSE;
+    // veted_calendar_listing_validate_fields($current_step, $form, $form_state); //validate required fields etc
+}
+</code></pre>
+
+<p>}
+ */</p>
+
+<p>/**</p>
+
+<ul>
+<li>Implements hook_order().
+*</li>
+<li>We listen for new orders arriving that need processing
+*</li>
+<li>
+<a href="https://github.com/param" class="user-mention">@param</a> string $op the operating being performed</li>
+<li>
+<a href="https://github.com/param" class="user-mention">@param</a> Order $arg1 the order object</li>
+<li>
+<p><a href="https://github.com/param" class="user-mention">@param</a> mixed $arg2 depends on the arg
+*/
+function ava_websignup_uc_order($op, &amp;$arg1, $arg2) {
+module_load_include('inc','webform','includes/webform.submissions');
+global $base_url;
+switch ($op) { 
+    case 'update':
+        foreach ($arg1-&gt;products as $item) {
+            if ($arg2 == 'completed' &amp;&amp; $item-&gt;data['module'] == 'ava_websignup'){ </p>
+
+<pre><code>            $result = webform_get_submission($item-&gt;data['webform_id'],$item-&gt;data['submission_id']);
+
+            // print_r($result);die();
+            /*** Insert Data ***/
+            if($result-&gt;data[22]['value'][0] == 'FULL/Yr'){
+                $yr_member = intval(date("Y")) - intval($result-&gt;data[41]['value'][0]);
+                if($yr_member &lt;=1){
+                    // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR1')), true);
+                    $member = 'FULL/YR1';
+                } else if($yr_member ==2){
+                    // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR2')), true);
+                    $member = 'FULL/YR2';
+                } else {
+                    // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR3')), true);
+                    $member = 'FULL/YR3';
+                }
+            } else {
+                $member = $result-&gt;data[22]['value'][0];
+            }
+
+            //title 
+
+            switch ($result-&gt;data[65]['value'][0]){
+                case 0:
+                    $title = "Miss";
+                    break;
+                case 1:
+                    $title = "Mr";
+                    break;
+                case 2:
+                    $title = "Mrs";
+                    break;
+                case 3:
+                    $title = "Ms";
+                    break;
+                case 4:
+                    $title = "Dr";
+                    break;
+                case 5:
+                    $title = "Professor";
+                    break;
+                default:
+                    $title = "Dr";
+                    break;
+            }
+
+            $state = explode("/", $result-&gt;data[10]['value'][0]);
+
+            $address = $result-&gt;data[11]['value'][0].", ".$result-&gt;data[9]['value'][0].", ".$state[1].", ".$result-&gt;data[12]['value'][0].", Australia";
+
+            $type = explode("/", $member); //member type
+
+            $chapter = explode("|", $result-&gt;data[63]['value'][0]);
+            $chapter = explode("/", $chapter[0]);
+
+            $middle_name = $result-&gt;data[6]['value'][0] != "" ? strtoupper(substr($result-&gt;data[6]['value'][0], 0)).". " : " ";
+
+            /* $data = array(
+                'ORG_CODE' =&gt; 'AVA',
+                'MEMBER_TYPE' =&gt; $type[0],
+                'CATEGORY' =&gt;  $type[1],
+                'STATUS' =&gt; 'P',
+                'LAST_FIRST' =&gt; strtoupper($result-&gt;data[5]['value'][0]).", ".strtoupper($result-&gt;data[4]['value'][0]),
+                'COMPANY_SORT' =&gt; '',
+                'FULL_NAME' =&gt; $title.". ".$result-&gt;data[4]['value'][0]." ".$middle_name." ".$result-&gt;data[5]['value'][0],
+                'COMPANY' =&gt; '',
+                'FULL_ADDRESS' =&gt; $address,
+                'PREFIX' =&gt; strtoupper($title),
+                'FIRST_NAME' =&gt; $result-&gt;data[4]['value'][0],
+                'MIDDLE_NAME' =&gt; $result-&gt;data[6]['value'][0],
+                'LAST_NAME' =&gt; $result-&gt;data[5]['value'][0],
+                'INFORMAL' =&gt; $result-&gt;data[4]['value'][0],
+                'WORK_PHONE' =&gt; $result-&gt;data[13]['value'][0],
+                'HOME_PHONE' =&gt; '',
+                'FAX' =&gt; '',
+                'TOLL_FREE' =&gt; $result-&gt;data[14]['value'][0],
+                'CITY' =&gt; strtoupper($result-&gt;data[9]['value'][0]),
+                'STATE_PROVINCE' =&gt; strtoupper($state[1]),
+                'ZIP' =&gt; $result-&gt;data[12]['value'][0],
+                'MAIL_ADDRESS' =&gt; $address,
+                'BILL_ADDRESS' =&gt; $address,
+                'GENDER' =&gt; $result-&gt;data[8]['value'][0],
+                'BIRTH_DATE' =&gt;  $result-&gt;data[7]['value'][0]." 00:00:00",
+                'CHAPTER' =&gt; $chapter[0],
+                'MEMBER_RECORD' =&gt; 'TRUE',
+                'COMPANY_RECORD' =&gt; 'FALSE',
+                'JOIN_DATE' =&gt; date('Y-m-d h:i:s'),
+                'PAID_THRU' =&gt; '2015-06-30 00:00:00',
+                'MEMBER_STATUS' =&gt; 'P',
+                'MEMBER_STATUS_DATE' =&gt; '',
+                'PREVIOUS_MT' =&gt; 'P',
+                'MT_CHANGE_DATE' =&gt; date('Y-m-d h:i:s'),
+                'DATE_ADDED' =&gt; date('Y-m-d h:i:s'),
+                'LAST_UPDATED' =&gt; date('Y-m-d h:i:s'),
+                'ADDRESS_NUM_1' =&gt; '', //save first address in Name Address tble before proceeding.
+                'ADDRESS_NUM_2' =&gt; '', //save first address in Name Address tble before proceeding.
+                'ADDRESS_NUM_3' =&gt; '', //save first address in Name Address tble before proceeding.
+                'SHIP_ADDRESS_NUM' =&gt; '', //save first address in Name Address tble before proceeding.
+                'EMAIL' =&gt; 'junnel@alphasys.com.au6',
+                'SIG' =&gt; $result-&gt;data[51]['value'], 
+                'STREET' =&gt; $result-&gt;data[11]['value'],
+                'COUNTRY' =&gt; 'Australia',
+            );
+
+
+            $pricing_list = json_decode(ava_websignup_api_call('POST', 'http://10.0.10.202/jack_api/api/save_member_data', array('data'=&gt;json_encode($data))), true);
+
+            print_r($result); die();     */         
+
+            $submitted['Name']['Prefix'] = $title;
+            $submitted['Name']['FirstName'] = $result-&gt;data[4]['value'][0];
+            $submitted['Name']['Informal'] = $result-&gt;data[4]['value'][0];
+            $submitted['Name']['MiddleName'] = $result-&gt;data[6]['value'][0];
+            $submitted['Name']['LastName'] = $result-&gt;data[5]['value'][0];
+            $submitted['Name']['BirthDate'] = $submission-&gt;data[7]['value'][0]." 00:00:00";
+            $submitted['Name_Demographics'][0]['DATE_OF_BIRTH'] = $result-&gt;data[7]['value'][0]." 00:00:00";
+             //$submitted['Name']['Gender'] = substr($submission-&gt;data[6]['value'][0], 0, 1);
+            $submitted['Name_Demographics'][0]['GENDER'] =  $result-&gt;data[8]['value'][0];
+            $submitted['Name']['HomePhone'] =$result-&gt;data[13]['value'][0];
+            $submitted['Name']['WorkPhone'] = $result-&gt;data[13]['value'][0];
+            $submitted['Name']['Fax'] = '';
+            $submitted['Name']['Mobile'] =$result-&gt;data[14]['value'][0];
+
+            if ($result-&gt;data[42]['value'][0] == "STUDN"){
+
+                $submitted['Name']['BillingCategory'] = "STUDN";
+                $submitted['Name']['CustomerTypeCode'] = "STUDN";
+
+            }else{
+                $submitted['Name']['BillingCategory'] = $type[1];
+                $submitted['Name']['CustomerTypeCode'] = $type[0];
+
+            }
+
+            $submitted['Address']['Postal']['Email'] = $result-&gt;data[36]['value'][0];
+            $submitted['Address']['Postal']['Address1'] = $result-&gt;data[11]['value'];
+            $submitted['Address']['Postal']['City'] =  strtoupper($result-&gt;data[9]['value'][0]);
+            $submitted['Address']['Postal']['State'] = strtoupper($state[1]);
+            $submitted['Address']['Postal']['PostalCode'] = $result-&gt;data[12]['value'][0];
+            $submitted['Address']['Postal']['Country'] = 'Australia';
+            $submitted['Address']['Postal']['IsPreferredMail'] = TRUE;
+            $submitted['Address']['Postal']['IsPreferredBill'] = TRUE;
+            $submitted['Address']['Postal']['IsPreferredShip'] = TRUE;
+              /*
+               Not needed as per spec
+               $submitted['Address']['Home']['Address1'] = $submission-&gt;data[11]['value'][0];
+               $submitted['Address']['Home']['City'] = $submission-&gt;data[12]['value'][0];
+               $submitted['Address']['Home']['State'] = $submission-&gt;data[66]['value'][0];
+               $submitted['Address']['Home']['PostalCode'] = $submission-&gt;data[67]['value'][0];
+               */
+            $email = $result-&gt;data[36]['value'][0];
+
+            $activity = array();
+            if (isset($result-&gt;data[42]['value'][0]) &amp;&amp; $result-&gt;data[42]['value'][0] == 'STUDN'){
+                $activity['PRODUCT_CODE'] = $result-&gt;data[66]['value'][0]; //Degree
+                $faculty = explode("|",$result-&gt;data[17]['value'][0]);
+                $activity['UF_1'] = $faculty[0]; //Faculty
+            }else {
+                $faculty = explode("|",$result-&gt;data[90]['value'][0]);
+                $activity['UF_1'] = $faculty[0]; //Faculty
+            }
+
+            $activity['UF_2'] = 'AUS'; //Country
+            $activity['DESCRIPTION'] =$result-&gt;data[67]['value'][0]; //Year
+
+            $contact_id = imis_contact_insert_contact();
+            $username = strtoupper($submitted['Name']['LastName']) . $contact_id;
+            $password = 'member1001';
+            imis_user_promote_contact_to_web_user($contact_id, $username, $password); //gives username and password
+
+            imis_contact_sync_single($contact_id, FALSE);
+            $c = imis_contact_load($contact_id);
+            $account-&gt;name = $username;
+            $account-&gt;imis['ContactId'] = $contact_id;
+            imis_contact_inflate($account);
+
+            $modified_account = imis_base_clone($account);
+            $modified_account-&gt;imis = $submitted;
+            imis_contact_submit_to_imis($account, $modified_account, array('Name-Membership' =&gt; 'Name-Membership', 'Name' =&gt; 'Name'));
+            imis_activities_save($contact_id, 'DEGREE', $activity);
+
+
+            $res1 = 0;
+            $res2 = 0;
+            $res3 = 0;
+            $res4 = 0;
+            $res5 = 0;
+            $res6 = "";
+            if($result-&gt;data[39]['value'][0] == '0'){
+                $res1 = 1;
+            } else if($result-&gt;data[39]['value'][0] == '1'){
+                $res2 = 1;
+            } else if($result-&gt;data[39]['value'][0] == '2'){
+                $res3 = 1;
+            } else if($result-&gt;data[39]['value'][0] == '3'){
+                $res4 = 1;
+            } else if($result-&gt;data[39]['value'][0] == '4'){
+                $res5 = 1;
+            } else {
+                $res6 = $result-&gt;data[53]['value'][0];
+            }
+            $date_chop =explode("-",$result-&gt;data[7]['value'][0]);
+            if (isset($result-&gt;data[42]['value'][0]) &amp;&amp; $result-&gt;data[42]['value'][0] == 'STUDN'){
+                $data = array(
+                'STATUS' =&gt; 'A',
+                'ID' =&gt; $contact_id,
+                'JOIN_REASON_1' =&gt; $res1,
+                'JOIN_REASON_2' =&gt; $res2,
+                'JOIN_REASON_3' =&gt; $res3,
+                'JOIN_REASON_4' =&gt; $res4,
+                'JOIN_REASON_5' =&gt; $res5,
+                'JOIN_REASON_6' =&gt; $res6,
+                'EMAIL' =&gt; $result-&gt;data[36]['value'][0],
+                'LAST_UPDATED' =&gt; date('Y-m-d h:i:s'),
+                'CHAPTER' =&gt; $state[1],
+                'ADDRESS_1' =&gt; $result-&gt;data[11]['value'][0],
+                'TYPE' =&gt; 'STUDN',
+                );
+            } else {
+                $data = array(
+                'STATUS' =&gt; 'A',
+                'ID' =&gt; $contact_id,
+                'JOIN_REASON_1' =&gt; $res1,
+                'JOIN_REASON_2' =&gt; $res2,
+                'JOIN_REASON_3' =&gt; $res3,
+                'JOIN_REASON_4' =&gt; $res4,
+                'JOIN_REASON_5' =&gt; $res5,
+                'JOIN_REASON_6' =&gt; $res6,
+                'EMAIL' =&gt; $result-&gt;data[36]['value'][0],
+                'LAST_UPDATED' =&gt; date('Y-m-d h:i:s'),
+                'CHAPTER' =&gt; $state[1],
+                'ADDRESS_1' =&gt; $result-&gt;data[11]['value'][0],
+
+                'segment' =&gt; $result-&gt;data[93]['value'][0],
+                'work' =&gt; $result-&gt;data[99]['value'][0],
+                'avj' =&gt; $result-&gt;data[101]['value'][0]==0?0:1,
+                'payee' =&gt; $result-&gt;data[100]['value'][0],
+                'terms' =&gt; 1,
+                'gender' =&gt; $result-&gt;data[8]['value'][0] == "F" ? "female": "male",
+                'birthDate' =&gt; array(
+                                    'year' =&gt;$date_chop[0],
+                                    'month' =&gt;$date_chop[1],
+                                    'day' =&gt;$date_chop[2],
+                                    ),
+                'marketing' =&gt; $result-&gt;data[101]['value'][1]==1?0:1,
+                'undergraduate' =&gt; '',
+                'TYPE' =&gt; 'FULL',
+                );
+            }
+
+            $result1 =  json_decode(ava_websignup_api_call('POST', 'api/change_member_status', array('data'=&gt;json_encode($data))), true);
+
+            $key = imis_base_get_admin_key();
+            $changed['Name']['BirthDate'] = $result-&gt;data[7]['value'][0]." 00:00:00";
+            $changed['Name']['Gender'] = $result-&gt;data[8]['value'][0] == "F" ? "Female": "Male"; 
+            imis_contact_update_contact($key, $contact_id, $changed['Name']);
+
+            $studn = "";
+            if (isset($result-&gt;data[42]['value'][0]) &amp;&amp; !empty($result-&gt;data[42]['value'][0])){
+                if ($result-&gt;data[42]['value'][0] == "STUDN"){
+                    $studn = 'STUDN';
+                }
+            }else if(isset($result-&gt;data[22]['value'][0]) &amp;&amp; !empty($result-&gt;data[22]['value'][0])) {
+                $save_activity_data = array('ID' =&gt; $contact_id,
+                                            'PRODUCT_CODE' =&gt; $result-&gt;data[68]['value'][0],
+                                            'DESCRIPTION' =&gt; $result-&gt;data[41]['value'][0],
+                                            'REG_NO' =&gt; $result-&gt;data[69]['value'][0],
+                                            );
+                json_decode(ava_websignup_api_call('POST', 'api/save_activity_board', array('data'=&gt;json_encode($save_activity_data))), true); 
+            }
+
+            /* This is for billing section
+
+                TYPE = STUDN, FULL/NODIS, FULL/RED50, etc.
+                SIG =&gt; All SIG's selected
+                AI_NATIONAL =&gt; 
+
+            */
+
+            $stdol_now = intval(date("n"));
+            // $stdol_now = 2;
+            if(($stdol_now &gt;= 4 &amp;&amp; $stdol_now &lt;= 9) || ($stdol_now &gt;= 10 &amp;&amp; $stdol_now &lt;= 12)){
+                $expire_year1 = intval(date('Y') + 1);
+            } else {
+                $expire_year1 = date('Y');
+            }
+
+            foreach($item-&gt;data['A1_NATIONAL'] as $a1_key=&gt;$a1_val){
+                $a1_arr = $a1_val;
+            }
+
+            if(isset($result-&gt;data[22]['value'][0]) &amp;&amp; $result-&gt;data[22]['value'][0] =='FULL/SPOUS'){
+                $data_billing = array(
+                    'TYPE' =&gt; $studn=='STUDN'?'STUDN':$result-&gt;data[22]['value'][0],
+                    'ID' =&gt; $contact_id,
+                    'SIG' =&gt; $item-&gt;data['SIG'],
+                    'A1_NATIONAL' =&gt; $item-&gt;data['A1_NATIONAL'],
+                    'CHAPT' =&gt; $item-&gt;data['CHAPT'],
+                    // 'date_applied' =&gt; date('Y-m-d h:i:s'),
+                    'date_applied' =&gt; date('Y-m-d h:i:s'),
+                    // 'date_paid_thru' =&gt; date('2015-07-01 00:00:00'), 
+                    'date_paid_thru' =&gt; ((string)$expire_year1)."-06-30 00:00:00",  
+                    // 'bill_begin' =&gt; date('Y-m-d h:i:s'), // january 1
+                    'bill_begin' =&gt; ((string)$expire_year1)."-07-01 00:00:00",
+                    'MEMBER_CATEGORY' =&gt; $result-&gt;data[93]['value'][0],
+                    'SPOUSE_ID' =&gt; $result-&gt;data[71]['value'][0],
+                    'SPOUSE_GIVEN' =&gt; $result-&gt;data[70]['value'][0],
+                    'SPOUSE_SURNAME' =&gt; $result-&gt;data[92]['value'][0],
+                );
+            } else {
+                $final_type = $result-&gt;data[22]['value'][0];
+                if(isset($result-&gt;data[22]['value'][0]) &amp;&amp; $result-&gt;data[22]['value'][0] == 'FULL/Yr'){
+                    $yr_ans = intval(date("Y")) - intval($result-&gt;data[41]['value'][0]);
+                    if($yr_ans &lt;=1){
+                        $final_type = 'FULL/YR1';
+                    } else if($yr_ans &lt;=2){
+                        $final_type = 'FULL/YR2';
+                    } else {
+                        $final_type = 'FULL/YR3';
+                    }
+                }
+                $data_billing = array(
+                    'TYPE' =&gt; $studn=='STUDN'?'STUDN':$final_type,
+                    'ID' =&gt; $contact_id,
+                    'SIG' =&gt; $item-&gt;data['SIG'],
+                    'A1_NATIONAL' =&gt; $item-&gt;data['A1_NATIONAL'],
+                    'CHAPT' =&gt; $item-&gt;data['CHAPT'],
+                    // 'date_applied' =&gt; date('Y-m-d h:i:s'),
+                    'date_applied' =&gt; date('Y-m-d h:i:s'),
+                    // 'date_paid_thru' =&gt; date('2015-07-01 00:00:00'), 
+                    'date_paid_thru' =&gt; ((string)$expire_year1)."-06-30 00:00:00",  
+                    // 'bill_begin' =&gt; date('Y-m-d h:i:s'), // january 1
+                    'bill_begin' =&gt; ((string)$expire_year1)."-07-01 00:00:00",
+                    'MEMBER_CATEGORY' =&gt; $result-&gt;data[93]['value'][0],
+                );
+            }   
+
+            $result2 =  json_decode(ava_websignup_api_call('POST', 'api/create_billing', array('data'=&gt;json_encode($data_billing))), true); 
+
+            /* This is for transaction and Batches */ 
+
+            $imis_order['BillToContactId'] = $contact_id;
+
+
+            $system_id = '001';
+
+
+            if (!variable_get('imis_ubercart_batch_management', FALSE)) {
+                $formula = variable_get('imis_ubercart_batch_formula', '');
+                $batch = eval($formula);
+
+            }
+
+            $order = $item-&gt;order;
+
+            $payments = uc_payment_load_payments($order-&gt;order_id);
+
+            // Assume the credit card payment is in the first
+            $payment = array_shift($payments);
+            if (!is_array($payment-&gt;data)) {
+              $payment-&gt;data = unserialize($payment-&gt;data);
+            }
+
+            $imis_order['PaymentType'] = imis_ubercart_payment_type('CreditCard');
+            $imis_order['CreditCardNumber'] = $order-&gt;payment_details['cc_number'];
+            $imis_order['CreditCardExpiration'] = $order-&gt;payment_details['cc_exp_month'] . '/' . substr($order-&gt;payment_details['cc_exp_year'], 2);
+            $imis_order['CreditDebitCardHoldersName'] = $order-&gt;payment_details['cc_owner'];
+            $imis_order['PaymentAmount'] = $payment_amount;
+            //print_r($ubercart_order);
+            // print_r($payment);die();
+            // store the reference as Ubercart order ID - credit card transaction ID, but since there's a limit of
+            // 9 chars, if it goes off this, truncate the credit card ID, as it's kept in drupal anyway
+            $trans_ref = substr($order-&gt;order_id . '-' . $payment-&gt;data['authcode'], 0, 9);
+            $imis_order['CreditDebitCardAuthorizationCode'] = $trans_ref;
+
+            $first_cc_number = substr($order-&gt;payment_details['cc_number'], 0, 1);
+            $cc_number_length = strlen($order-&gt;payment_details['cc_number']);
+            if ($first_cc_number == '3' &amp;&amp; $cc_number_length == 14) {
+                $imis_order['CashAccountCode'] = variable_get('imis_ubercart_cash_account_diners', '');
+            }
+            elseif ($first_cc_number == '3' &amp;&amp; $cc_number_length == 15) {
+                $imis_order['CashAccountCode'] = variable_get('imis_ubercart_cash_account_americanexpress', '');
+            }
+            elseif ($first_cc_number == '4') {
+                $imis_order['CashAccountCode'] = variable_get('imis_ubercart_cash_account_visa', '');
+            }
+            else if ($first_cc_number == '5') {
+                $imis_order['CashAccountCode'] = variable_get('imis_ubercart_cash_account_mastercard', '');
+            }
+            else if ($first_cc_number == '6') {
+                $imis_order['CashAccountCode'] = variable_get('imis_ubercart_cash_account_discover', '');
+            }
+            else {
+                $imis_order['CashAccountCode'] = variable_get('imis_ubercart_cash_account_default', '');
+            }
+
+            $imis_order['SourceCode'] = variable_get('imis_ubercart_source_code', '');
+
+
+
+            $title = $item-&gt;data['title'];
+            $pricing = $item-&gt;data['pricing'];
+
+            foreach ($item-&gt;data['A1_NATIONAL'] as $key =&gt; $value){
+                $ai_key = $key; 
+                $ai_value = $value; 
+            }
+
+            foreach ($item-&gt;data['CHAPT'] as $key =&gt; $value){
+                $chapt_key = $key; 
+                $chapt_value = $value; 
+            }
+
+            $key_code = explode("|", $ai_key);
+
+            $trans_data[] = array(
+                    'LINE_NUMBER' =&gt; 1,
+                    'BATCH_NUM' =&gt; $batch,
+                    'OWNER_ORG_CODE' =&gt; 'AVA',
+                    'SOURCE_SYSTEM' =&gt; 'DUES',
+                    'JOURNAL_TYPE' =&gt; 'PAY',
+                    'TRANSACTION_TYPE' =&gt; 'DIST',
+                    'TRANSACTION_DATE' =&gt; date('Y-m-d'),
+                    'BT_ID' =&gt; $contact_id,
+                    'ST_ID' =&gt; $contact_id,
+                    'DESCRIPTION' =&gt; $title[$ai_key],
+                    'SOURCE_CODE' =&gt; $imis_order['SourceCode'],
+                    'PRODUCT_CODE' =&gt; $key_code[0],
+                    'EFFECTIVE_DATE' =&gt; date('Y-m-d h:i:s'),
+                    'PAID_THRU' =&gt; ((string)$expire_year1)."-06-30 00:00:00",
+                    'MONTHS_PAID' =&gt; '12',
+                    'GL_ACCT_ORG_CODE' =&gt; 'AVA',    
+                    'PSEUDO_ACCOUNT' =&gt; 'AVA-DUES-'.$key_code[0],
+                    'QUANTITY' =&gt; '1',
+                    'PROD_TYPE' =&gt; 'DUES',          
+                    'ACTIVITY_TYPE' =&gt; 'DUES',
+                    'ACTION_CODES' =&gt; 'A',
+                    'DATE_ENTERED' =&gt;  date('Y-m-d'),
+                    'ENTERED_BY' =&gt; 'MANAGER',
+                    'SUB_LINE_NUMBER' =&gt; 1,
+                    'AMOUNT' =&gt; -1 * floatval($ai_value), //should be negative  
+            );
+
+            $trans_data[] = array(
+                    'LINE_NUMBER' =&gt; 2,
+                    'BATCH_NUM' =&gt; $batch,
+                    'OWNER_ORG_CODE' =&gt; 'AVA',
+                    'SOURCE_SYSTEM' =&gt; 'DUES',
+                    'JOURNAL_TYPE' =&gt; 'PAY',
+                    'TRANSACTION_TYPE' =&gt; 'DIST',
+                    'TRANSACTION_DATE' =&gt; date('Y-m-d'),
+                    'BT_ID' =&gt; $contact_id,
+                    'ST_ID' =&gt; $contact_id,
+                    'DESCRIPTION' =&gt; $title[$chapt_key],
+                    'SOURCE_CODE' =&gt; $imis_order['SourceCode'],
+                    'PRODUCT_CODE' =&gt; $chapt_key,
+                    'EFFECTIVE_DATE' =&gt; date('Y-m-d h:i:s'),
+                    'PAID_THRU' =&gt; ((string)$expire_year1)."-06-30 00:00:00",
+                    'MONTHS_PAID' =&gt; '12',
+                    'GL_ACCT_ORG_CODE' =&gt; 'AVA',    
+                    'PSEUDO_ACCOUNT' =&gt; 'AVA-DUES-'.$chapt_key,
+                    'QUANTITY' =&gt; '1',
+                    'PROD_TYPE' =&gt; 'CHAPT',         
+                    'ACTIVITY_TYPE' =&gt; 'DUES',
+                    'ACTION_CODES' =&gt; 'A',
+                    'DATE_ENTERED' =&gt;  date('Y-m-d'),
+                    'ENTERED_BY' =&gt; 'MANAGER',
+                    'SUB_LINE_NUMBER' =&gt; 1,
+                    'AMOUNT' =&gt; -1 * floatval($chapt_value),    //should be negative        
+            );
+
+
+            $counter = 3;
+
+            foreach ($item-&gt;data['SIG'] as $key =&gt; $values) {
+                /*  $contact = imis_contact_load($product-&gt;data['contact_id']);
+                //This will fetch a new copy of any billing data into $contact
+                imis_billing_imis_contact_process($contact);
+                $node = node_load($product-&gt;nid);
+                $price = imis_billing_renewal_quote($node, $contact, $tax);
+                $amount = ($price - $tax) * $product-&gt;qty;
+                $effective_date = "July 01, ".(date('Y') + 1);
+                $effective_date = date('Y-m-d', strtotime($effective_date));
+                $thru_date = "June 30, ".date('Y');
+                $thru_date = date('Y-m-d', strtotime($thru_date)); */
+
+
+                $trans_data[] = array(
+                    'LINE_NUMBER' =&gt; $counter,
+                    'BATCH_NUM' =&gt; $batch,
+                    'OWNER_ORG_CODE' =&gt; 'AVA',
+                    'SOURCE_SYSTEM' =&gt; 'DUES',
+                    'JOURNAL_TYPE' =&gt; 'PAY',
+                    'TRANSACTION_TYPE' =&gt; 'DIST',
+                    'TRANSACTION_DATE' =&gt; date('Y-m-d'),
+                    'BT_ID' =&gt; $contact_id,
+                    'ST_ID' =&gt; $contact_id,
+                    'DESCRIPTION' =&gt; $title[$key],
+                    'SOURCE_CODE' =&gt; $imis_order['SourceCode'],
+                    'PRODUCT_CODE' =&gt; $key,
+                    'EFFECTIVE_DATE' =&gt; date('Y-m-d h:i:s'),
+                    'PAID_THRU' =&gt; ((string)$expire_year1)."-06-30 00:00:00",
+                    'MONTHS_PAID' =&gt; '12',
+                    'GL_ACCT_ORG_CODE' =&gt; 'AVA',    
+                    'PSEUDO_ACCOUNT' =&gt; 'AVA-DUES-'.$key,
+                    'QUANTITY' =&gt; '1',
+                    'PROD_TYPE' =&gt; 'SEC',           
+                    'ACTIVITY_TYPE' =&gt; 'DUES',
+                    'ACTION_CODES' =&gt; 'A',
+                    'DATE_ENTERED' =&gt;  date('Y-m-d'),
+                    'ENTERED_BY' =&gt; 'MANAGER',
+                    'SUB_LINE_NUMBER' =&gt; 1,
+                    'AMOUNT' =&gt; -1 * floatval($values), //should be negative        
+                );
+                $counter++;
+            }
+
+            $final_cc_num = "";
+            $the_cc_number = strlen($imis_order['CreditCardNumber']) - 4;
+            for($x=0;$x&lt;$the_cc_number;$x++){
+                $final_cc_num .='*';
+            }
+            $final_cc_num = $final_cc_num.substr($imis_order['CreditCardNumber'],-4);
+             //This is for payment;
+            $trans_data[] = array(
+                'LINE_NUMBER' =&gt; $counter,
+                'BATCH_NUM' =&gt; $batch,
+                'OWNER_ORG_CODE' =&gt; 'AVA',
+                'SOURCE_SYSTEM' =&gt; 'DUES',
+                'JOURNAL_TYPE' =&gt; 'PAY',
+                'TRANSACTION_TYPE' =&gt; 'PAY',
+                'TRANSACTION_DATE' =&gt; date('Y-m-d'),
+                'BT_ID' =&gt; $contact_id,
+                'ST_ID' =&gt; $contact_id,
+                'SOURCE_CODE' =&gt; $imis_order['SourceCode'],
+                'PSEUDO_ACCOUNT' =&gt; 'AVA-DUES-PAY',
+                'PAYMENT_TYPE' =&gt;  imis_ubercart_payment_type('CreditCard'),
+                'CHECK_NUMBER' =&gt;   $imis_order['CashAccountCode'] ,
+                // 'CC_NUMBER' =&gt;   $imis_order['CreditCardNumber'], //make this to ****************1234
+                'CC_NUMBER' =&gt;  $final_cc_num, //make this to ****************1234
+                'CC_EXPIRE' =&gt; $imis_order['CreditCardExpiration'] ,
+                'CC_AUTHORIZE' =&gt;$payment-&gt;data['authcode'],
+                'CC_NAME' =&gt; $imis_order['CreditDebitCardHoldersName'],
+                'DATE_ENTERED' =&gt;  date('Y-m-d'),
+                'SUB_LINE_NUMBER' =&gt; 1,
+                'ENTERED_BY' =&gt; 'MANAGER',
+                'AMOUNT' =&gt; $order-&gt;order_total,            //print_r($order) to get total amount.
+                'GL_ACCT_ORG_CODE' =&gt; 'AVA',            
+            );
+
+
+            if ($result-&gt;data[42]['value'][0] == "STUDN"){
+                $the_member_type = 'STUDN';
+                $the_member_category = 'STUDN';
+            } else {
+                $the_member_category = $type[1];
+                $the_member_type = $type[0];
+            }
+            $passData = array(
+                 'data'=&gt;
+                     json_encode(array(
+                         'transaction' =&gt; $trans_data,
+                         'BATCH_NUM' =&gt; $batch,
+                         'total' =&gt; $order-&gt;order_total,
+                         'SIG'  =&gt; (isset($result-&gt;data[51]['value']))?$result-&gt;data[51]['value']:'',
+                         'A1_NATIONAL'  =&gt; $result-&gt;data[64]['value'][0],
+                         'CHAPTER'  =&gt; $result-&gt;data[63]['value'][0],
+                         'price_list'   =&gt; $result-&gt;data[85]['value'],
+                         'description_list' =&gt; $result-&gt;data[86]['value'],
+                         'ID'   =&gt; $contact_id,
+                         'MEMBER_TYPE'  =&gt; $the_member_type,
+                         'CATEGORY' =&gt; $the_member_category,
+                     )
+                 )
+             );     
+            // print_r(ava_websignup_api_call('POST', 'api/set_billing_transaction',$passData));die();
+            //$responseData = ava_event_api_call('POST','api/set_billing_transaction',$passData);  
+            $responseData =  json_decode(ava_websignup_api_call('POST', 'api/set_billing_transaction',$passData), true); 
+            //print_r($responseData);
+
+            /* End code */
+
+            $message = "Welcome to the AVA!&lt;br/&gt;&lt;br/&gt;
+
+            You can now log in to the AVA website with the following details:&lt;br/&gt;&lt;br/&gt;
+            Username: " . $username . "&lt;br/&gt;
+            Password: member1001&lt;br/&gt;&lt;br/&gt;
+
+            Your member pack will be sent to you in the post shortly to your nominated postal address. Also, an electronic receipt will also be emailed to you in any moment. &lt;br/&gt;&lt;br/&gt;
+
+            Please contact AVA membership if you have any questions via email &lt;a href='mailto:members@ava.com.au'&gt;members@ava.com.au&lt;/a&gt;";
+
+              $params = array(
+                'subject' =&gt; 'AVA membership',
+                'message' =&gt; $message,
+              );
+            //  drupal_mail('imis_base', 'ava_membership_' . $contact_id, $email, language_default(), $params);
+            drupal_mail('imis_base', 'ava_membership_' . $contact_id, $result-&gt;data[36]['value'][0], language_default(), $params);
+
+            drupal_mail('imis_base', 'ava_membership_' . $contact_id, 'junnel@alphasys.com.au', language_default(), $params);
+
+            $message = '
+            A new membership application has been received with the following details:&lt;br/&gt;&lt;br/&gt;
+            Member ID: &lt;strong&gt;'.$contact_id.'&lt;br/&gt;&lt;/strong&gt;
+            Batch Number: &lt;strong&gt;'.$batch.'&lt;br/&gt;&lt;/strong&gt;
+            ';
+
+            if ((isset($result-&gt;data[42]['value'][0]) &amp;&amp; $result-&gt;data[42]['value'][0] == 'STUDN')){
+                $message .= "Have you ever been subject to disciplinary proceedings for professional misconduct? - &lt;strong&gt;".$result-&gt;data[96]['value'][1]."&lt;/strong&gt;&lt;br/&gt;";
+                $message .= "In the last 5 years has any claim been made against you or are you aware of any facts or circumstances which may give rise to a claim against you in the future? - &lt;strong&gt;".$result-&gt;data[96]['value'][2]."&lt;/strong&gt;&lt;br/&gt;";
+                $message .= "Do you perform any professional services that fall outside the terms of your program of study as a veterinary student? - &lt;strong&gt;".$result-&gt;data[96]['value'][3]."&lt;/strong&gt;&lt;br/&gt;";
+            }else{
+                if((isset($result-&gt;data[22]['value'][0]) &amp;&amp; $result-&gt;data[22]['value'][0]  == 'FULL/Yr')){
+                    $yr_member = intval(date("Y")) - intval($result-&gt;data[41]['value'][0]);
+                    if($yr_member &lt;=1){
+                        // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR1')), true);
+                        $member12 = 'FULL/YR1';
+                    } else if($yr_member ==2){
+                        // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR2')), true);
+                        $member12 = 'FULL/YR2';
+                    } else {
+                        // $pricing_list = json_decode(ava_websignup_api_call('POST', 'api/get_pricing', array('cat' =&gt; 'FULL/YR3')), true);
+                        $member12 = 'FULL/YR3';
+                    }
+
+                    if ($member12 == "FULL/YR1" || $member12=="FULL/YR2"){
+                        $message .= "Have you ever been subject to disciplinary proceedings for professional misconduct? - &lt;strong&gt;".$result-&gt;data[96]['value'][1]."&lt;/strong&gt;&lt;br/&gt;";
+                        $message .= "In the last 5 years has any claim been made against you or are you aware of any facts or circumstances which may give rise to a claim against you in the future? - &lt;strong&gt;".$result-&gt;data[96]['value'][2]."&lt;/strong&gt;&lt;br/&gt;";
+                        $message .= "Do you perform any professional services that fall outside the terms of your program of study as a veterinary student? - &lt;strong&gt;".$result-&gt;data[96]['value'][3]."&lt;/strong&gt;&lt;br/&gt;";
+                    }
+                }
+            }
+            global $base_url;
+            $message .= "You can review the application here: ".$base_url."/node/".$result-&gt;nid."/submission/".$result-&gt;sid;
+
+            $params = array(
+                'subject' =&gt; 'New AVA Membership Application Received',
+                'message' =&gt; $message,
+            );
+            //  drupal_mail('imis_base', 'ava_membership_' . $contact_id, $email, language_default(), $params);
+            drupal_mail('imis_base', 'ava_membership_' . $contact_id, 'junnel@alphasys.com.au', language_default(), $params);
+
+            drupal_mail('imis_base', 'ava_membership_' . $contact_id, 'members@ava.com.au', language_default(), $params);
+
+            drupal_goto("order-confirmation-page", array(
+                'query' =&gt; array(
+                    'id' =&gt; $order-&gt;order_id,
+                ),
+            ));
+
+        }
+    }
+break;
+</code></pre>
+
+<p>}</p>
+</li>
+</ul>
+
+<p>}</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Membership websignup maintained by <a href="https://github.com/jlmwebhosting">jlmwebhosting</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
